@@ -3,11 +3,55 @@
 #include <stdbool.h>
 #include <math.h>
 
+// Constants
 int SCREEN_WIDTH = 640;
 int SCREEN_HEIGHT = 480;
+const double TIME_STEP = 0.1;
+const double VELOCITY_MODIFIER = 0.66;
+const double GRAVITY = 9.8;
 
 SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
+
+typedef struct {
+    double x;
+    double y;
+} Vector;
+
+typedef struct {
+    Vector position;
+    Vector velocity;
+    double radius;
+} Ball;
+
+double magnitude(Vector v) {
+    return sqrt(v.x * v.x + v.y * v.y);
+}
+
+Vector normalize(Vector v) {
+    double mag = magnitude(v);
+    Vector result = {v.x / mag, v.y / mag};
+    return result;
+}
+
+Vector subtract(Vector a, Vector b) {
+    Vector result = {a.x - b.x, a.y - b.y};
+    return result;
+}
+
+double dotProduct(Vector a, Vector b) {
+    return a.x * b.x + a.y * b.y;
+}
+
+Vector multiply(Vector v, double scalar) {
+    Vector result = {v.x * scalar, v.y * scalar};
+    return result;
+}
+
+Vector add(Vector a, Vector b) {
+    Vector result = {a.x + b.x, a.y + b.y};
+    return result;
+}
 
 bool init() {
     bool success = true;
@@ -16,7 +60,7 @@ bool init() {
         printf("Failure to initialize, SDL_Error: %s\n", SDL_GetError());
         success = false;
     } else {
-        window = SDL_CreateWindow( "physics", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN );
+        window = SDL_CreateWindow("chattens", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
 
         if (window == NULL) {
             printf("Failure to create window, SDL_Error: %s\n", SDL_GetError());
@@ -71,118 +115,79 @@ void drawCircle(SDL_Renderer* renderer, int centerX, int centerY, int radius) {
     }
 }
 
-void boarderCollision(int* ballX, int* ballY, int* velX, int* velY, double ballRadius, int* boarderCenterX, int* boarderCenterY, double boarderRadius) {
-    double distance = round(sqrt(pow((*boarderCenterX - *ballX), 2) + pow((*boarderCenterY - *ballY), 2)));
+// Handle ball collision with the border
+void borderCollision(Ball* ball, Ball* borderBall) {
+    Vector distanceVec = subtract(ball->position, borderBall->position);
+    double distance = magnitude(distanceVec);
 
-    // printf("Distance: %f\n", distance);
-    if (distance + ballRadius >= boarderRadius) {
-        *velX = -(*velX) * 0.66;
-        *velY = -(*velY) * 0.66;
+    if (distance >= (borderBall->radius - ball->radius)) {
+        Vector normal = normalize(distanceVec);
+        double dot = dotProduct(ball->velocity, normal);
+        Vector scaledNormal = multiply(normal, 2 * dot);
+        ball->velocity = subtract(ball->velocity, scaledNormal);
 
-        printf("velY = %d\n", *velY);
+        ball->velocity = multiply(ball->velocity, VELOCITY_MODIFIER);
+
+        // printf("magnitude: %f\n", magnitude(ball->velocity));
+        if (magnitude(ball->velocity) < 1.9) {
+            ball->velocity.x = 0;
+            ball->velocity.y = 0;
+        }
     }
 }
 
-int main (int argc, char* argv[] ) {
+
+
+
+int main(int argc, char* argv[]) {
     bool exit = false;
-
     SDL_Event e;
-
-    // MAKE A STRUCT FOR A BALL
-    int circleX = SCREEN_WIDTH / 2;
-    int circleY = SCREEN_HEIGHT / 2;
-    double radius = 10;
-    int velX = 1;
-    int velY = 1;
-    int velMod = 1;
-
-    int boarderCircleX = SCREEN_WIDTH / 2;
-    int boarderCircleY = SCREEN_HEIGHT / 2;
-    double boarderCircleRadius = 100;
+    Uint32 lastTime = SDL_GetTicks();
 
     if (!init()) {
-        printf("Failure to initialize");
-
+        printf("Failure to initialize\n");
     } else {
+        Ball ball = {{SCREEN_WIDTH / 2 + 50, SCREEN_HEIGHT / 2}, {1, 2}, 10};
+        Ball borderBall = {{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2}, {0, 0}, 100};
+
         while (!exit) {
             SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
             SDL_RenderClear(renderer);
-            // printf("%s\n", hasCollided);
 
-            // Input events
             while (SDL_PollEvent(&e) != 0) {
                 if (e.type == SDL_QUIT) {
                     exit = true;
                 }
-
-                // if (e.type == SDL_KEYDOWN) {
-                //     switch(e.key.keysym.sym) {
-                //         case SDLK_UP:
-                //             circleY -= velY;
-                //             velY += velMod;
-                //             break;
-                        
-                //         case SDLK_DOWN:
-                //             circleY += velY;
-                //             velY += velMod;
-                //             break;
-
-                //         case SDLK_LEFT:
-                //             circleX -= velX;
-                //             velX += velMod;
-                //             break;
-
-                //         case SDLK_RIGHT:
-                //             circleX += velX;
-                //             velX += velMod;
-                //             break;
-                //     }
-                // } else {
-                //     velX = velMod; 
-                //     velY = velMod;
-                // }
             }
 
-            circleY += velY;
-            velY += velMod; 
+            // Fine test of using delta time, didnt work :(
+            Uint32 currentTime = SDL_GetTicks();
+            double deltaTime = currentTime - lastTime / 1000;
+            lastTime = currentTime;
 
-            boarderCollision(&circleX, &circleY, &velX, &velY, radius, &boarderCircleX, &boarderCircleY, boarderCircleRadius);
+            // printf("deltaTime: %f\n", deltaTime);
 
+            // Update ball position
+            ball.position = add(ball.position, multiply(ball.velocity, TIME_STEP));
+            // Factor in gravity
+            ball.velocity.y += GRAVITY * TIME_STEP;
 
-
-
-            // Boarder collision:
-            // if (circleX <= radius) {
-            //     circleX = radius;
-            // }
-            // if (circleX >= SCREEN_WIDTH - radius) {
-            //     circleX = SCREEN_WIDTH - radius;
-            // }
-            // if (circleY <= radius) {
-            //     circleY = radius;
-            // }
-            // if (circleY >= SCREEN_HEIGHT - radius) {
-            //     circleY = SCREEN_HEIGHT - radius;
-            // }
-
+            // Collision thingin
+            borderCollision(&ball, &borderBall);
 
             SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
+            drawCircle(renderer, borderBall.position.x, borderBall.position.y, borderBall.radius);
+            drawCircle(renderer, ball.position.x, ball.position.y, ball.radius);
 
-            // Make ball follow mouse position
-            // int mouseX, mouseY;
-            // Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
-            // circleX = mouseX;
-            // circleY = mouseY;
-
-            // Draw boarder
-            drawCircle(renderer, boarderCircleX, boarderCircleY, boarderCircleRadius);
-
-            // Draw ball
-            drawCircle(renderer, circleX, circleY, radius);
-
+            // Update screen
             SDL_RenderPresent(renderer);
-            
-            SDL_Delay(16);
+
+            // Delay for approx, 60 fps
+            SDL_Delay(16); // 16 ms
         }
+
+        closeApp();
     }
+
+    return 0;
 }
