@@ -7,7 +7,7 @@
 int SCREEN_WIDTH = 640;
 int SCREEN_HEIGHT = 480;
 const double TIME_STEP = 0.1;
-const double VELOCITY_MODIFIER = 0.66;
+const double VELOCITY_MODIFIER = 0.8;
 const double GRAVITY = 9.8;
 
 SDL_Window* window = NULL;
@@ -121,6 +121,8 @@ void borderCollision(Ball* ball, Ball* borderBall) {
     double distance = magnitude(distanceVec);
 
     if (distance >= (borderBall->radius - ball->radius)) {
+        printf("COLLISION ");
+
         Vector normal = normalize(distanceVec);
         double dot = dotProduct(ball->velocity, normal);
         Vector scaledNormal = multiply(normal, 2 * dot);
@@ -129,9 +131,30 @@ void borderCollision(Ball* ball, Ball* borderBall) {
         ball->velocity = multiply(ball->velocity, VELOCITY_MODIFIER);
 
         // printf("magnitude: %f\n", magnitude(ball->velocity));
-        if (magnitude(ball->velocity) < 1.9) {
-            ball->velocity.x = 0;
+        // if (magnitude(ball->velocity) < 4) {
+        //     ball->velocity.x = 0;
+        //     ball->velocity.y = 0;
+        // }
+
+
+
+        // Stuck on edge
+        if (ball->position.y != borderBall->position.y + borderBall->radius) {
+            if (ball->velocity.x == 0 && ball->velocity.y == 0) {
+                printf("STUCK ON EDGE\n");
+                ball->velocity.x = 0;
+                ball->velocity.y = 0;
+            }
+
+            printf("velX: %f, velY: %f, posX: %f, posY: %f\n", ball->velocity.x, round(ball->velocity.y), ball->position.x, round(ball->position.y));
+        }
+
+        // Stop bouncing in middle
+        if (round(ball->position.y) == 330 && round(ball->velocity.y) == -4) {
+            printf("posY = 330, velY = -3.92");
             ball->velocity.y = 0;
+            ball->velocity.x = 0;
+            return;
         }
     }
 }
@@ -158,6 +181,15 @@ int main(int argc, char* argv[]) {
                 if (e.type == SDL_QUIT) {
                     exit = true;
                 }
+
+                if (e.type == SDL_MOUSEBUTTONDOWN) {
+                    // DEBUG - Make ball follow mouse position
+                    int mouseX, mouseY;
+                    Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
+                    ball.position.x = mouseX;
+                    ball.position.y = mouseY;
+                    ball.velocity.y = 2;
+                }
             }
 
             // Fine test of using delta time, didnt work :(
@@ -171,6 +203,7 @@ int main(int argc, char* argv[]) {
             ball.position = add(ball.position, multiply(ball.velocity, TIME_STEP));
             // Factor in gravity
             ball.velocity.y += GRAVITY * TIME_STEP;
+            // printf("velY: %f ", ball.velocity.y);
 
             // Collision thingin
             borderCollision(&ball, &borderBall);
@@ -183,7 +216,7 @@ int main(int argc, char* argv[]) {
             SDL_RenderPresent(renderer);
 
             // Delay for approx, 60 fps
-            SDL_Delay(16); // 16 ms
+            SDL_Delay(32) ; // 16 ms
         }
 
         closeApp();
