@@ -130,7 +130,7 @@ double borderCollision(Ball* ball, Ball* borderBall) {
 
         ball->velocity = multiply(ball->velocity, VELOCITY_MODIFIER);
 
-        // DEBUG SUGGA MY DICKO
+        // DEBUG
         printf("velX: %f, velY: %f, posX: %f, posY: %f\n", ball->velocity.x, ball->velocity.y, ball->position.x, ball->position.y);
     }
 
@@ -158,12 +158,12 @@ int main(int argc, char* argv[]) {
                 }
 
                 if (e.type == SDL_MOUSEBUTTONDOWN) {
-                    // DEBUG - Make ball follow mouse position
+                    // DEBUG - teleport ball to mouse position
                     int mouseX, mouseY;
                     Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
                     ball.position.x = SCREEN_WIDTH / 2;
                     ball.position.y = mouseY;
-                    ball.velocity.y = 2;
+                    // ball.velocity.y = 2;
                 }
             }
 
@@ -172,20 +172,45 @@ int main(int argc, char* argv[]) {
             // double deltaTime = currentTime - lastTime / 1000;
             // lastTime = currentTime;
 
+            // STOP BALL FROM BOUNCING IF IT IS STUCK IN MIDDLE WITH NO X VELOCITY
+            // Problem ------------ if ball meets the criteria but still has a y velocity it won't bounce --------------
+            if (round(ball.position.y) == 330 && round(ball.velocity.x * 10) / 100 == 0) {
+                // printf("velX: %f\n", round(ball.velocity.x * 10) / 100);
+                printf("STUCK IN BOTTOM MIDDLE????? velY: %f\n", ball.velocity.y);
+                ball.velocity.x = 0;
+                ball.velocity.y = 0;
+            } else {
+                ball.velocity.y += GRAVITY * TIME_STEP;
+
+                Vector distanceVec = subtract(ball.position, borderBall.position);
+                double distance = magnitude(distanceVec);            
+            
+                if (distance >= (borderBall.radius - ball.radius)) {
+                    printf("-------------------------------------------- DISTANCE: %f\n\n\n\n\n\n", distance);
+
+                    Vector inverseNormal = multiply(normalize(distanceVec), -1);
+                    printf("normalX: %f, normalY: %f\n", inverseNormal.x, inverseNormal.y);
+
+                    int m = borderBall.position.y;
+
+                    for(int i = 0; i < SCREEN_WIDTH; i++) {
+                        int yValue = (int)(inverseNormal.y / inverseNormal.x) * i - m;
+                        printf("x: %d, y: %d\n", i, yValue);
+                        
+                        SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
+                        SDL_RenderDrawPoint(renderer, i, yValue);
+
+                    }
+
+
+                } 
+            }
             // Collision thingin
             double distance = borderCollision(&ball, &borderBall);
 
             // Update ball position
             ball.position = add(ball.position, multiply(ball.velocity, TIME_STEP));
 
-            // STOP BALL FROM BOUNCING IF IT IS STUCK IN MIDDLE WITH NO X VELOCITY¨
-            if (round(distance) == 90 && round(ball.position.y) == 330 && round(ball.velocity.x * 10) / 100 == 0 ) {
-                printf("velX: %f\n", round(ball.velocity.x * 10) / 100);
-                ball.velocity.x = 0;
-                ball.velocity.y = 0;
-            } else {
-                ball.velocity.y += GRAVITY * TIME_STEP;
-            }
 
             SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
             drawCircle(renderer, borderBall.position.x, borderBall.position.y, borderBall.radius);
