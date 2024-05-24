@@ -60,7 +60,7 @@ bool init() {
         printf("Failure to initialize, SDL_Error: %s\n", SDL_GetError());
         success = false;
     } else {
-        window = SDL_CreateWindow("chattens", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+        window = SDL_CreateWindow("Physics Engine", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
 
         if (window == NULL) {
             printf("Failure to create window, SDL_Error: %s\n", SDL_GetError());
@@ -115,14 +115,11 @@ void drawCircle(SDL_Renderer* renderer, int centerX, int centerY, int radius) {
     }
 }
 
-// Handle ball collision with the border
 double borderCollision(Ball* ball, Ball* borderBall) {
     Vector distanceVec = subtract(ball->position, borderBall->position);
     double distance = magnitude(distanceVec);
 
     if (distance >= (borderBall->radius - ball->radius)) {
-        printf("COLLISION ");
-
         Vector normal = normalize(distanceVec);
         double dot = dotProduct(ball->velocity, normal);
         Vector scaledNormal = multiply(normal, 2 * dot);
@@ -131,10 +128,66 @@ double borderCollision(Ball* ball, Ball* borderBall) {
         ball->velocity = multiply(ball->velocity, VELOCITY_MODIFIER);
 
         // DEBUG
-        printf("velX: %f, velY: %f, posX: %f, posY: %f\n", ball->velocity.x, ball->velocity.y, ball->position.x, ball->position.y);
+        // printf("velX: %f, velY: %f, posX: %f, posY: %f\n", ball->velocity.x, ball->velocity.y, ball->position.x, ball->position.y);
     }
 
     return distance;
+}
+
+void handleOutOfBounds(Ball* ball, Ball* borderBall) {
+
+    Vector distanceVec = subtract(ball->position, borderBall->position);
+    double distance = magnitude(distanceVec);            
+
+    if (distance >= (borderBall->radius - ball->radius)) {
+        Vector inverseNormal = multiply(normalize(distanceVec), -1);
+
+        int m = borderBall->position.y;
+
+        Vector standard = {1, 0};
+        double angle = acos((dotProduct(inverseNormal, standard)) / magnitude(inverseNormal) * magnitude(standard));
+        printf("angle: %f\n", angle * 180 / M_PI);
+
+        Ball Point;
+        Point.position.x = (borderBall->position.x + (int)round((borderBall->radius - ball->radius) * cos(angle))) * -1 + SCREEN_WIDTH;
+        Point.position.y = borderBall->position.y + (int)round((borderBall->radius - ball->radius) * sin(angle));
+
+        // If it's above the center of the screen, adjust the y value to match ball
+        if (ball->position.y < SCREEN_HEIGHT / 2) {
+            Point.position.y = (borderBall->position.y + (int)round((borderBall->radius - ball->radius) * sin(angle))) * -1 + SCREEN_HEIGHT;
+        }
+
+        Vector distanceVec = subtract(Point.position, borderBall->position);
+        double distance = magnitude(distanceVec);            
+        printf("distance: %f\n", distance);
+
+        // printf("x: %d, y: %d\n", Point.position.x, Point.position.y);
+
+        ball->position = Point.position;
+
+        // SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
+        // drawCircle(renderer, Point.x, Point.y, 20);
+
+
+        // for(int i = 0; i < SCREEN_WIDTH; i++) {
+        //     float yValue = (float)(inverseNormal.y / inverseNormal.x) * i - m;
+        //     // printf("x: %d, y: %d\n", i, yValue);
+
+        //     float xValue;
+
+        //     if (ball->position.x < SCREEN_WIDTH / 2) {
+        //         xValue = (SCREEN_WIDTH / 2 + i) * -1 + SCREEN_WIDTH;
+        //         yValue = yValue * -1 - SCREEN_HEIGHT;
+        //     } else {
+        //         xValue = SCREEN_WIDTH / 2 + i;
+        //     }
+
+        //     // TEMP - draws a line from center to in direction of ball
+        //     SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
+        //     // drawCircle(renderer, xValue, yValue + SCREEN_HEIGHT, 5);
+        //     SDL_RenderDrawPoint(renderer, xValue, yValue + SCREEN_HEIGHT);
+        // }
+    } 
 }
 
 int main(int argc, char* argv[]) {
@@ -161,9 +214,10 @@ int main(int argc, char* argv[]) {
                     // DEBUG - teleport ball to mouse position
                     int mouseX, mouseY;
                     Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
-                    ball.position.x = SCREEN_WIDTH / 2;
+                    ball.position.x = mouseX;
                     ball.position.y = mouseY;
-                    // ball.velocity.y = 2;
+                    ball.velocity.y = 2;
+                    ball.velocity.x = 1;
                 }
             }
 
@@ -173,44 +227,22 @@ int main(int argc, char* argv[]) {
             // lastTime = currentTime;
 
             // STOP BALL FROM BOUNCING IF IT IS STUCK IN MIDDLE WITH NO X VELOCITY
-            // Problem ------------ if ball meets the criteria but still has a y velocity it won't bounce --------------
             if (round(ball.position.y) == 330 && round(ball.velocity.x * 10) / 100 == 0) {
-                // printf("velX: %f\n", round(ball.velocity.x * 10) / 100);
-                printf("STUCK IN BOTTOM MIDDLE????? velY: %f\n", ball.velocity.y);
                 ball.velocity.x = 0;
                 ball.velocity.y = 0;
             } else {
                 ball.velocity.y += GRAVITY * TIME_STEP;
-
-                Vector distanceVec = subtract(ball.position, borderBall.position);
-                double distance = magnitude(distanceVec);            
-            
-                if (distance >= (borderBall.radius - ball.radius)) {
-                    printf("-------------------------------------------- DISTANCE: %f\n\n\n\n\n\n", distance);
-
-                    Vector inverseNormal = multiply(normalize(distanceVec), -1);
-                    printf("normalX: %f, normalY: %f\n", inverseNormal.x, inverseNormal.y);
-
-                    int m = borderBall.position.y;
-
-                    for(int i = 0; i < SCREEN_WIDTH; i++) {
-                        int yValue = (int)(inverseNormal.y / inverseNormal.x) * i - m;
-                        printf("x: %d, y: %d\n", i, yValue);
-                        
-                        SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
-                        SDL_RenderDrawPoint(renderer, i, yValue);
-
-                    }
-
-
-                } 
             }
+
+
             // Collision thingin
             double distance = borderCollision(&ball, &borderBall);
+            
+            // Handle ball going outside border
+            handleOutOfBounds(&ball, &borderBall);
 
             // Update ball position
             ball.position = add(ball.position, multiply(ball.velocity, TIME_STEP));
-
 
             SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
             drawCircle(renderer, borderBall.position.x, borderBall.position.y, borderBall.radius);
@@ -219,8 +251,8 @@ int main(int argc, char* argv[]) {
             // Update screen
             SDL_RenderPresent(renderer);
 
-            // Delay for approx, 60 fps
-            SDL_Delay(32) ; // 16 ms
+            // Delay for approx, 30 fps
+            SDL_Delay(32) ; // 32 ms
         }
 
         closeApp();
