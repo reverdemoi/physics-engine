@@ -5,8 +5,8 @@
 #include <stdlib.h>
 #include <time.h>
 
-int SCREEN_WIDTH = 640;
-int SCREEN_HEIGHT = 480;
+int SCREEN_WIDTH = 1060;
+int SCREEN_HEIGHT = 820;
 const double TIME_STEP = 0.1;
 const double VELOCITY_MODIFIER = 0.8;
 double GRAVITY = 9.8;
@@ -135,6 +135,61 @@ double borderCollision(Ball* ball, Ball* borderBall) {
     return distance;
 }
 
+void calculateVelocities(double m1, Vector u1, double m2, Vector u2, Vector *v1, Vector *v2, Vector r1, Vector r2) {
+    Vector n = normalize(subtract(r1, r2));
+
+    double u1n = dotProduct(u1, n);
+    double u2n = dotProduct(u2, n);
+
+    Vector u1n_vec = multiply(n, u1n);
+    Vector u1t_vec = subtract(u1, u1n_vec);
+    
+    Vector u2n_vec = multiply(n, u2n);
+    Vector u2t_vec = subtract(u2, u2n_vec);
+
+    double v1n = (u1n * (m1 - m2) + 2 * m2 * u2n) / (m1 + m2);
+    double v2n = (u2n * (m2 - m1) + 2 * m1 * u1n) / (m1 + m2);
+
+    Vector v1n_vec = multiply(n, v1n);
+    Vector v2n_vec = multiply(n, v2n);
+
+    *v1 = add(v1n_vec, u1t_vec);
+    *v2 = add(v2n_vec, u2t_vec);
+}
+
+void handleBallCollision(Ball* ball, Ball* balls, int numBalls) {
+    for (int j = 0; j < numBalls; j++) {
+        if (ball == &balls[j]) {
+            continue; // Skip the same ball
+        }
+
+        Vector distanceVec = subtract(ball->position, balls[j].position);
+        double distance = magnitude(distanceVec);
+
+        if (distance <= (ball->radius + balls[j].radius)) {
+            printf("BALL COLLISION\n");
+
+            Vector newVel1, newVel2;
+            calculateVelocities(1.0, ball->velocity, 1.0, balls[j].velocity, &newVel1, &newVel2, ball->position, balls[j].position);
+
+            ball->velocity = newVel1;
+            balls[j].velocity = newVel2;
+
+            ball->velocity = multiply(ball->velocity, VELOCITY_MODIFIER);
+            balls[j].velocity = multiply(balls[j].velocity, VELOCITY_MODIFIER);
+        }
+    }
+}
+/* 
+###### BUG LIST
+ 
+1. Ball dissapears after collision - only seen once
+2. Generated balls sometimes get stuck in border
+3. Values has to be tweaked
+4. Smaller ball should have less force
+5. after a while the balls get so much momentum they wont stop
+*/
+
 void handleOutOfBounds(Ball* ball, Ball* borderBall) {
     Vector distanceVec = subtract(ball->position, borderBall->position);
     double distance = magnitude(distanceVec);            
@@ -192,8 +247,8 @@ int main(int argc, char* argv[]) {
     if (!init()) {
         printf("Failure to initialize\n");
     } else {
-        int numBalls = 10;
-        Ball borderBall = {{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2}, {0, 0}, 100};
+        int numBalls = 5;
+        Ball borderBall = {{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2}, {0, 0}, 400};
 
         Ball* balls = (Ball*)malloc(sizeof(Ball) * numBalls);
         if (balls == NULL) {
@@ -249,18 +304,26 @@ int main(int argc, char* argv[]) {
                 // Update ball[i] position
                 balls[i].position = add(balls[i].position, multiply(balls[i].velocity, TIME_STEP));
 
+                // printf("Ball %d: posX: %f, posY: %f, velX: %f, velY: %f\n", i, balls[i].position.x, balls[i].position.y, balls[i].velocity.x, balls[i].velocity.y);
+
+                // printf("RUNNING MAIN FOR LOOP ITERATION %d\n", i);
+
+                handleBallCollision(&balls[i], balls, numBalls);
+
                 SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
-                drawCircle(renderer, borderBall.position.x, borderBall.position.y, borderBall.radius);
                 drawCircle(renderer, balls[i].position.x, balls[i].position.y, balls[i].radius);
             }
 
+            SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
+            drawCircle(renderer, borderBall.position.x, borderBall.position.y, borderBall.radius);
 
             // Update screen
             SDL_RenderPresent(renderer);
 
             // Delay for approx. 30 fps
-            SDL_Delay(32) ; // 32 ms
+            SDL_Delay(16) ; // 32 ms
         }
+        free(balls);
 
         closeApp();
     }
