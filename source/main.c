@@ -10,13 +10,22 @@
 #include "common.h"
 
 /* 
-###### BUG LIST
- 
-1. Ball dissapears after collision - only seen once
-2. Generated balls sometimes get stuck in border
-3. Values has to be tweaked
-4. Smaller ball should have less force
-5. after a while the balls get so much momentum they wont stop
+
+###### BUG LIST / TODO LIST ######
+
+    1. High Priority
+
+    [] - Generated balls sometimes get stuck in border
+
+    2. Medium Priority
+
+    [x] - Smaller ball should have less force
+
+    3. Low Priority
+
+    [] - Values has to be tweaked
+    [] - Ball dissapears after collision - only seen once
+
 */
 
 Ball* initBalls(Ball* borderBall, int numBalls) {
@@ -24,16 +33,22 @@ Ball* initBalls(Ball* borderBall, int numBalls) {
     
     Ball* balls;
 
-    *borderBall = (Ball){{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2}, {0, 0}, 400};
+    *borderBall = (Ball){{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2}, {0, 0}, 250};
     
-    if (numBalls <= 1) {
-        balls = (Ball*)malloc(sizeof(Ball) * numBalls);
-        if (balls == NULL) {
-            printf("Failure to allocate memory\n");
-            return NULL;
-        }
-    } else {
-        balls = (Ball*)malloc(numBalls * sizeof(Ball));
+    // if (numBalls <= 1) {
+    //     balls = (Ball*)malloc(sizeof(Ball) * numBalls);
+    //     if (balls == NULL) {
+    //         printf("Failure to allocate memory\n");
+    //         return NULL;
+    //     }
+    // } else {
+    //     balls = (Ball*)malloc(numBalls * sizeof(Ball));
+    // }
+
+    balls = (Ball*)malloc(numBalls * sizeof(Ball));
+    if (balls == NULL) {
+        printf("Failure to allocate memory\n");
+        return NULL;
     }
 
     generateBalls(numBalls, balls, borderBall);
@@ -59,7 +74,7 @@ int main(int argc, char* argv[]) {
     } else {
         Ball borderBall;
         Ball* balls;
-        int numBalls = 5;
+        int numBalls = 50;
 
         balls = initBalls(&borderBall, numBalls);
 
@@ -91,7 +106,7 @@ int main(int argc, char* argv[]) {
                 }
             }
 
-            numBalls++;
+            // numBalls++;
 
             // Fine test of using delta time, didnt work :(
             // Uint32 currentTime = SDL_GetTicks();
