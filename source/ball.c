@@ -23,7 +23,7 @@ void generateBalls(int numBalls, Ball* balls, Ball* borderBall) {
         // Random velocity and radius
         balls[i].velocity.x = ((double)rand() / RAND_MAX) * 10.0 + 1.0;
         balls[i].velocity.y = ((double)rand() / RAND_MAX) * 10.0 + 1.0;
-        balls[i].radius = ((double)rand() / RAND_MAX) * 5.0 + 5.0;
+        balls[i].radius = ((double)rand() / RAND_MAX) * 20.0 + 10.0;
         balls[i].gravity = true;
     }
 

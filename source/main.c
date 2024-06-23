@@ -19,18 +19,27 @@
 5. after a while the balls get so much momentum they wont stop
 */
 
-Ball* initBalls(Ball* borderBall) {
+Ball* initBalls(Ball* borderBall, int numBalls) {
+    printf("Initializing balls\n");
+    
     Ball* balls;
 
     *borderBall = (Ball){{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2}, {0, 0}, 400};
     
-    balls = (Ball*)malloc(sizeof(Ball) * numBalls);
-    if (balls == NULL) {
-        printf("Failure to allocate memory\n");
-        return NULL;
+    if (numBalls <= 1) {
+        balls = (Ball*)malloc(sizeof(Ball) * numBalls);
+        if (balls == NULL) {
+            printf("Failure to allocate memory\n");
+            return NULL;
+        }
+    } else {
+        balls = (Ball*)malloc(numBalls * sizeof(Ball));
     }
 
     generateBalls(numBalls, balls, borderBall);
+    printf("Number of balls: %d\n", numBalls);
+    printf("Size of a ball: %d\n", sizeof(Ball));
+    printf("Size of balls: %d\n", sizeof(balls));
     srand(time(NULL));
 
     return balls;
@@ -50,8 +59,9 @@ int main(int argc, char* argv[]) {
     } else {
         Ball borderBall;
         Ball* balls;
+        int numBalls = 5;
 
-        balls = initBalls(&borderBall);
+        balls = initBalls(&borderBall, numBalls);
 
         while (!exit) {
             frameStart = SDL_GetTicks();
@@ -77,16 +87,16 @@ int main(int argc, char* argv[]) {
                     // balls[0].position.y = mouseY;
                     // balls[0].velocity.y = 2;
                     // balls[0].velocity.x = 1;
-                    balls = initBalls(&borderBall);
+                    balls = initBalls(&borderBall, numBalls);
                 }
             }
+
+            numBalls++;
 
             // Fine test of using delta time, didnt work :(
             // Uint32 currentTime = SDL_GetTicks();
             // double deltaTime = currentTime - lastTime / 1000;
             // lastTime = currentTime;
-
-            /* BALL 1 */
 
             // STOP BALL FROM BOUNCING IF IT IS STUCK IN MIDDLE WITH NO X VELOCITY
             for (int i = 0; i < numBalls; i++) {   
