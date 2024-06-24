@@ -11,7 +11,13 @@ typedef struct {
     bool gravity;
 } Ball;
 
-void generateBalls(int numBalls, Ball* balls, Ball* borderBall);
+typedef struct {
+    Ball *balls;
+    int size;
+    int capacity;
+} BallArray;
+
+void genBallValues(Ball* ball, Ball* borderBall);
 double borderCollision(Ball* ball, Ball* borderBall);
 void handleOutOfBounds(Ball* ball, Ball* borderBall);
 bool collisionCheck(Ball* ball1, Ball* ball2);

@@ -5,32 +5,24 @@
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
+#include <SDL2/SDL.h>
 
-const int pi = 3.1415926535897932;
-
-void generateBalls(int numBalls, Ball* balls, Ball* borderBall) {
+void genBallValues(Ball* ball, Ball* borderBall) {
     double centerX = SCREEN_WIDTH / 2.0;
     double centerY = SCREEN_HEIGHT / 2.0;
 
-    for (int i = 0; i < numBalls; i++) {
-        // Generate random point inside the circle
-        double angle = ((double)rand() / RAND_MAX) * 2.0 * pi;
-        double radius = sqrt((double)rand() / RAND_MAX) * borderBall->radius; // sqrt for uniform distribution
+    // Generate random point inside the circle
+    double angle = ((double)rand() / RAND_MAX) * 2.0 * M_PI;
+    double radius = sqrt((double)rand() / RAND_MAX) * borderBall->radius; // sqrt for uniform distribution
 
-        balls[i].position.x = centerX + radius * cos(angle);
-        balls[i].position.y = centerY + radius * sin(angle);
+    ball->position.x = centerX + radius * cos(angle);
+    ball->position.y = centerY + radius * sin(angle);
 
-        // Random velocity and radius
-        balls[i].velocity.x = ((double)rand() / RAND_MAX) * 10.0 + 1.0;
-        balls[i].velocity.y = ((double)rand() / RAND_MAX) * 10.0 + 1.0;
-        balls[i].radius = ((double)rand() / RAND_MAX) * 20.0 + 10.0;
-        balls[i].gravity = true;
-    }
-
-    // print all values od balls
-    // for (int i = 0; i < numBalls; i++) {
-    //     printf("Ball %d: posX: %f, posY: %f, velX: %f, velY: %f, radius: %f\n", i, balls[i].position.x, balls[i].position.y, balls[i].velocity.x, balls[i].velocity.y, balls[i].radius);
-    // }
+    // Random velocity and radius
+    ball->velocity.x = ((double)rand() / RAND_MAX) * 10.0 + 1.0;
+    ball->velocity.y = ((double)rand() / RAND_MAX) * 10.0 + 1.0;
+    ball->radius = ((double)rand() / RAND_MAX) * 20.0 + 10.0;
+    ball->gravity = true;
 }
 
 double borderCollision(Ball* ball, Ball* borderBall) {
