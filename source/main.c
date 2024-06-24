@@ -60,8 +60,8 @@ void newBall(Ball* borderBall, BallArray* balls) {
     *borderBall = (Ball){{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2}, {0, 0}, 250};
     
     if (balls->size >= balls->capacity) {
-        balls->capacity *= 2;
-        printf("balls capacity: %f\n", balls->capacity);
+        balls->capacity++;
+        printf("Resized array to %d\n", balls->capacity);
         Ball* newBalls = (Ball*)realloc(balls->balls, balls->capacity * sizeof(Ball));
         if (newBalls == NULL) {
             printf("realloc failure\n");
@@ -73,7 +73,6 @@ void newBall(Ball* borderBall, BallArray* balls) {
         }
 
         balls->balls = newBalls;
-        printf("increased balls capacity\n");
     }
 
     printf("New ball craeted at position: %i\n", balls->size);
@@ -99,8 +98,6 @@ void newBall(Ball* borderBall, BallArray* balls) {
     newBall->gravity = true;
     // genBallValues(newBall, borderBall);
     printf("ball values generated");
-
-    printf("Size of balls: %d\n", sizeof(balls));
 
     printf("\n");
 }
@@ -171,7 +168,7 @@ int main(int argc, char* argv[]) {
 
 
             // STOP BALL FROM BOUNCING IF IT IS STUCK IN MIDDLE WITH NO X VELOCITY
-            for (int i = 0; i < ballsArray->size + 1; i++) {   
+            for (int i = 0; i < ballsArray->size; i++) {   
                 if (TIME_STEP == 0) {
                     SDL_Delay(100000);
                 }
