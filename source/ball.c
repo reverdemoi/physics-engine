@@ -1,11 +1,59 @@
 #include "ball.h"
 #include "vector.h"
 #include "common.h"
+#include "SDL_utils.h"
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
 #include <SDL2/SDL.h>
+
+const int VELOCITY_THRESHOLD = 0.1;
+
+void initBallArray(BallArray *balls) {
+    balls->balls = (Ball*)malloc(sizeof(Ball));
+    if (balls->balls == NULL) {
+        perror("Initial malloc failed");
+        exit(EXIT_FAILURE); // Exit the program if the function fails
+    }
+    balls->size = 0;
+    balls->capacity = 0;
+}
+
+void freeBallArray(BallArray *balls) {
+    free(balls->balls);
+    balls->size = 0;
+    balls->capacity = 0;
+}
+
+void newBall(Ball* borderBall, BallArray* balls) {
+    *borderBall = (Ball){{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2}, {0, 0}, 250};
+    
+    if (balls->size >= balls->capacity) {
+        balls->capacity++;
+        printf("Resized array to %d\n", balls->capacity);
+        Ball* newBalls = (Ball*)realloc(balls->balls, balls->capacity * sizeof(Ball));
+        if (newBalls == NULL) {
+            printf("realloc failure\n");
+            freeBallArray(balls);
+            free(balls);
+            closeApp();
+            exit(EXIT_FAILURE);
+            return;
+        }
+
+        balls->balls = newBalls;
+    }
+
+    printf("New ball created at position: %i\n", balls->size);
+    Ball *newBall = &balls->balls[balls->size];
+    printf("ball created\n");
+    balls->size++;
+
+    genBallValues(newBall, borderBall);
+
+    printf("\n");
+}
 
 void genBallValues(Ball* ball, Ball* borderBall) {
     double centerX = SCREEN_WIDTH / 2.0;
@@ -15,14 +63,24 @@ void genBallValues(Ball* ball, Ball* borderBall) {
     double angle = ((double)rand() / RAND_MAX) * 2.0 * M_PI;
     double radius = sqrt((double)rand() / RAND_MAX) * borderBall->radius; // sqrt for uniform distribution
 
-    ball->position.x = centerX + radius * cos(angle);
-    ball->position.y = centerY + radius * sin(angle);
+    // ball->position.x = centerX + radius * cos(angle);
+    // ball->position.y = centerY + radius * sin(angle);
+    ball->position = (Vector){centerX, centerY};
 
     // Random velocity and radius
-    ball->velocity.x = ((double)rand() / RAND_MAX) * 10.0 + 1.0;
-    ball->velocity.y = ((double)rand() / RAND_MAX) * 10.0 + 1.0;
-    ball->radius = ((double)rand() / RAND_MAX) * 20.0 + 10.0;
+    // ball->velocity.x = ((double)rand() / RAND_MAX) * 10.0 + 1.0;
+    // ball->velocity.y = ((double)rand() / RAND_MAX) * 10.0 + 1.0;
+    // ball->radius = ((double)rand() / RAND_MAX) * 10.0 + 5.0;
+    ball->radius = 5;
     ball->gravity = true;
+
+    int mouseX, mouseY;
+    Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
+    Vector mouseVec = {mouseX, mouseY};
+
+    // Calculate the angle between the mouse and the center of the circle
+    Vector normal = normalize(subtract(mouseVec, borderBall->position));
+    ball->velocity = multiply(normal, 50.0);
 }
 
 double borderCollision(Ball* ball, Ball* borderBall) {
@@ -126,6 +184,17 @@ void handleBallCollision(Ball* ball, Ball* balls, int numBalls, Ball* borderBall
 
             ball->velocity = multiply(ball->velocity, VELOCITY_MODIFIER);
             balls[j].velocity = multiply(balls[j].velocity, VELOCITY_MODIFIER);
+
+            applyRollingPhysics(ball, &balls[j]);
         }
+    }
+}
+
+void applyRollingPhysics(Ball* ball, Ball* otherBall) {
+    if (magnitude(ball->velocity) < VELOCITY_THRESHOLD) {
+        Vector distanceVec = subtract(otherBall->position, ball->position);
+        Vector tangent = {-distanceVec.y, distanceVec.x};  // Perpendicular to the distance vector
+        tangent = normalize(tangent);
+        ball->velocity = multiply(tangent, 0.1);  // Apply a small tangential force to simulate rolling
     }
 }

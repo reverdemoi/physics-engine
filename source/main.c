@@ -11,7 +11,6 @@
 #include "ball.h"
 #include "common.h"
 
-
 /* 
 
 ###### BUG LIST / TODO LIST ######
@@ -19,10 +18,12 @@
     1. High Priority
 
         [] - Generated balls sometimes get stuck in border
+        [] - Make new balls have velocity towards mouse position
 
     2. Medium Priority
 
         [x] - Smaller ball should have less force
+        [x] - Separate generation of values for new balls into separate function
 
     3. Low Priority
 
@@ -40,68 +41,6 @@ static inline int64_t GetTicks() {
     return ticks.QuadPart;
 }
 
-void initBallArray(BallArray *balls, double capacity) {
-    balls->balls = (Ball*)malloc(capacity * sizeof(Ball));
-    if (balls->balls == NULL) {
-        perror("Initial malloc failed");
-        exit(EXIT_FAILURE); // Exit the program if the function fails
-    }
-    balls->size = 0;
-    balls->capacity = capacity;
-}
-
-void freeBallArray(BallArray *balls) {
-    free(balls->balls);
-    balls->size = 0;
-    balls->capacity = 0;
-}
-
-void newBall(Ball* borderBall, BallArray* balls) {
-    *borderBall = (Ball){{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2}, {0, 0}, 250};
-    
-    if (balls->size >= balls->capacity) {
-        balls->capacity++;
-        printf("Resized array to %d\n", balls->capacity);
-        Ball* newBalls = (Ball*)realloc(balls->balls, balls->capacity * sizeof(Ball));
-        if (newBalls == NULL) {
-            printf("realloc failure\n");
-            freeBallArray(balls);
-            free(balls);
-            closeApp();
-            exit(EXIT_FAILURE);
-            return;
-        }
-
-        balls->balls = newBalls;
-    }
-
-    printf("New ball craeted at position: %i\n", balls->size);
-    Ball *newBall = &balls->balls[balls->size];
-    printf("ball created\n");
-    balls->size++;
-
-    // printf("newBall position: %f, %f\n", newBall->position.x, newBall->position.y);
-    double centerX = SCREEN_WIDTH / 2.0;
-    double centerY = SCREEN_HEIGHT / 2.0;
-
-    // Generate random point inside the circle
-    double angle = ((double)rand() / RAND_MAX) * 2.0 * M_PI;
-    double radius = sqrt((double)rand() / RAND_MAX) * borderBall->radius; // sqrt for uniform distribution
-
-    newBall->position.x = centerX + radius * cos(angle);
-    newBall->position.y = centerY + radius * sin(angle);
-
-    // Random velocity and radius
-    newBall->velocity.x = ((double)rand() / RAND_MAX) * 10.0 + 1.0;
-    newBall->velocity.y = ((double)rand() / RAND_MAX) * 10.0 + 1.0;
-    newBall->radius = ((double)rand() / RAND_MAX) * 20.0 + 10.0;
-    newBall->gravity = true;
-    // genBallValues(newBall, borderBall);
-    printf("ball values generated");
-
-    printf("\n");
-}
-
 int main(int argc, char* argv[]) {
     bool exit = false;
     SDL_Event e;
@@ -117,7 +56,7 @@ int main(int argc, char* argv[]) {
         Ball borderBall;
         BallArray *ballsArray = (BallArray * )malloc(sizeof(BallArray));
 
-        initBallArray(ballsArray, 10);
+        initBallArray(ballsArray);
 
         int64_t lastTick = GetTicks() / 1000000;
 
@@ -127,7 +66,7 @@ int main(int argc, char* argv[]) {
             int64_t ticks = GetTicks() / 1000000;
             // printf("Ticks: %lld\n", ticks / 1000000);
 
-            if (ticks == lastTick + 5) {
+            if (ticks == lastTick + 1) {
                 // printf("BALL ADDED");
                 lastTick = ticks;
 
