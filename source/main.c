@@ -42,8 +42,18 @@ static inline int64_t GetTicks() {
 
 void initBallArray(BallArray *balls, double capacity) {
     balls->balls = (Ball*)malloc(capacity * sizeof(Ball));
+    if (balls->balls == NULL) {
+        perror("Initial malloc failed");
+        exit(EXIT_FAILURE); // Exit the program if the function fails
+    }
     balls->size = 0;
     balls->capacity = capacity;
+}
+
+void freeBallArray(BallArray *balls) {
+    free(balls->balls);
+    balls->size = 0;
+    balls->capacity = 0;
 }
 
 void newBall(Ball* borderBall, BallArray* balls) {
@@ -51,71 +61,46 @@ void newBall(Ball* borderBall, BallArray* balls) {
     
     if (balls->size >= balls->capacity) {
         balls->capacity *= 2;
-        Ball *newPoints = (Ball *)realloc(balls->balls, balls->capacity * sizeof(balls));
-        if (newPoints == NULL) {
-            fprintf(stderr, "Epic realloc failure\n");
+        printf("balls capacity: %f\n", balls->capacity);
+        Ball* newBalls = (Ball*)realloc(balls->balls, balls->capacity * sizeof(Ball));
+        if (newBalls == NULL) {
+            printf("realloc failure\n");
+            freeBallArray(balls);
+            free(balls);
+            closeApp();
+            exit(EXIT_FAILURE);
             return;
         }
-        balls->balls = newPoints;
-        printf("Resized array to %d\n", balls->capacity);
+
+        balls->balls = newBalls;
+        printf("increased balls capacity\n");
     }
-    
-    printf("New ball craeted at position: %i\n", balls->size++);
-    Ball *newBall = &balls->balls[balls->size++];
+
+    printf("New ball craeted at position: %i\n", balls->size);
+    Ball *newBall = &balls->balls[balls->size];
     printf("ball created\n");
+    balls->size++;
 
     // printf("newBall position: %f, %f\n", newBall->position.x, newBall->position.y);
-    printf("address of newBall: %p\n", newBall);
-    printf("address of newBall: %p\n", &newBall);
-
     double centerX = SCREEN_WIDTH / 2.0;
     double centerY = SCREEN_HEIGHT / 2.0;
 
-    printf("STEP 1");
     // Generate random point inside the circle
     double angle = ((double)rand() / RAND_MAX) * 2.0 * M_PI;
     double radius = sqrt((double)rand() / RAND_MAX) * borderBall->radius; // sqrt for uniform distribution
 
-    printf("STEP 2");
     newBall->position.x = centerX + radius * cos(angle);
     newBall->position.y = centerY + radius * sin(angle);
 
-    printf("STEP 3");
     // Random velocity and radius
     newBall->velocity.x = ((double)rand() / RAND_MAX) * 10.0 + 1.0;
-    printf("STEP 4");
     newBall->velocity.y = ((double)rand() / RAND_MAX) * 10.0 + 1.0;
-    printf("STEP 5");
     newBall->radius = ((double)rand() / RAND_MAX) * 20.0 + 10.0;
-    printf("STEP 6");
     newBall->gravity = true;
     // genBallValues(newBall, borderBall);
     printf("ball values generated");
 
     printf("Size of balls: %d\n", sizeof(balls));
-    printf("Address of balls: %p\n", balls);
-
-    // // if (numBalls <= 1) {
-    // //     balls = (Ball*)malloc(sizeof(Ball) * numBalls);
-    // //     if (balls == NULL) {
-    // //         printf("Failure to allocate memory\n");
-    // //         return NULL;
-    // //     }
-    // // } else {
-    // //     balls = (Ball*)malloc(numBalls * sizeof(Ball));
-    // // }
-
-    // balls = (Ball*)malloc(numBalls * sizeof(Ball));
-    // if (balls == NULL) {
-    //     printf("Failure to allocate memory\n");
-    //     return NULL;
-    // }
-
-    // generateBalls(numBalls, balls, borderBall);
-    // printf("Number of balls: %d\n", numBalls);
-    // printf("Size of a ball: %d\n", sizeof(Ball));
-    // printf("Size of balls: %d\n", sizeof(balls));
-    // srand(time(NULL));
 
     printf("\n");
 }
@@ -133,7 +118,9 @@ int main(int argc, char* argv[]) {
         printf("Failure to initialize\n");
     } else {
         Ball borderBall;
-        BallArray *balls;
+        BallArray *ballsArray = (BallArray * )malloc(sizeof(BallArray));
+
+        initBallArray(ballsArray, 10);
 
         int64_t lastTick = GetTicks() / 1000000;
 
@@ -147,7 +134,7 @@ int main(int argc, char* argv[]) {
                 // printf("BALL ADDED");
                 lastTick = ticks;
 
-                newBall(&borderBall, balls);
+                newBall(&borderBall, ballsArray);
             }
 
             // make background black
@@ -183,35 +170,33 @@ int main(int argc, char* argv[]) {
             // lastTime = currentTime;
 
 
-            /*
-
             // STOP BALL FROM BOUNCING IF IT IS STUCK IN MIDDLE WITH NO X VELOCITY
-            for (int i = 0; i < numBalls; i++) {   
+            for (int i = 0; i < ballsArray->size + 1; i++) {   
                 if (TIME_STEP == 0) {
                     SDL_Delay(100000);
                 }
 
-                if (round(balls[i].position.y) == 330 && round(balls[i].velocity.x * 10) / 10 == 0) {
-                    balls[i].velocity.x = 0;
-                    balls[i].velocity.y = 0;
+                if (round(ballsArray->balls[i].position.y) == 330 && round(ballsArray->balls[i].velocity.x * 10) / 10 == 0) {
+                    ballsArray->balls[i].velocity.x = 0;
+                    ballsArray->balls[i].velocity.y = 0;
                 } else {
-                    balls[i].velocity.y += GRAVITY * TIME_STEP;
+                    ballsArray->balls[i].velocity.y += GRAVITY * TIME_STEP;
                 }
 
                 // Collision thingin
-                double distance = borderCollision(&balls[i], &borderBall);
+                double distance = borderCollision(&ballsArray->balls[i], &borderBall);
                 
                 // Handle ball[i] going outside border
-                handleOutOfBounds(&balls[i], &borderBall);
+                handleOutOfBounds(&ballsArray->balls[i], &borderBall);
 
-                handleBallCollision(&balls[i], balls, numBalls, &borderBall);
+                handleBallCollision(&ballsArray->balls[i], ballsArray->balls, ballsArray->size + 1, &borderBall);
                 // printf("ball[0] velocity: %f, %f\n", balls[0].velocity.x, balls[0].velocity.y);
                 // printf("ball[0] magnitude of velocity: %f\n", magnitude(balls[0].velocity));
 
                 // Update ball[i] position
-                balls[i].position = add(balls[i].position, multiply(balls[i].velocity, TIME_STEP));
+                ballsArray->balls[i].position = add(ballsArray->balls[i].position, multiply(ballsArray->balls[i].velocity, TIME_STEP));
 
-                // printf("Ball %d: posX: %f, posY: %f, velX: %f, velY: %f\n", i, balls[i].position.x, balls[i].position.y, balls[i].velocity.x, balls[i].velocity.y);
+                // printf("Ball %d: posX: %f, posY: %f, velX: %f, velY: %f\n", i, ballsArray->balls[i].position.x, ballsArray->balls[i].position.y, ballsArray->balls[i].velocity.x, ballsArray->balls[i].velocity.y);
 
                 // printf("RUNNING MAIN FOR LOOP ITERATION %d\n", i);
 
@@ -219,10 +204,9 @@ int main(int argc, char* argv[]) {
                 ////////////////////////// IF MAGNITUDE OF VELOCITY IS LESS THAN 0.1 THEN CANCEL GRAVITY, DO THAT BY ADDING GRAVITY PROPERTY TO BALL AND ONLY ADDING GRAVITY IF THAT PROPERTY IS TRUE
 
                 SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
-                drawCircle(renderer, balls[i].position.x, balls[i].position.y, balls[i].radius);
+                drawCircle(renderer, ballsArray->balls[i].position.x, ballsArray->balls[i].position.y, ballsArray->balls[i].radius);
             }
 
-            */
 
             // Update screen
             SDL_RenderPresent(renderer);
@@ -240,7 +224,7 @@ int main(int argc, char* argv[]) {
             // Delay for approx. 30 fps
             SDL_Delay(16) ; // 32 ms
         }
-        //free(balls);
+        free(ballsArray);
 
         closeApp();
     }
