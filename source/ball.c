@@ -8,7 +8,7 @@
 #include <time.h>
 #include <SDL2/SDL.h>
 
-const int VELOCITY_THRESHOLD = 0.1;
+const int VELOCITY_THRESHOLD = 1;
 
 void initBallArray(BallArray *balls) {
     balls->balls = (Ball*)malloc(sizeof(Ball));
@@ -59,7 +59,7 @@ void newBall(Ball* borderBall, BallArray* balls) {
     printf("\n");
 }
 
-void genBallValues(Ball* ball, Ball* borderBall) {
+void genBallValues(Ball* ball, Ball* borderBall, BallArray* balls) {
     double centerX = SCREEN_WIDTH / 2.0;
     double centerY = SCREEN_HEIGHT / 2.0;
 
@@ -77,6 +77,7 @@ void genBallValues(Ball* ball, Ball* borderBall) {
     // ball->radius = ((double)rand() / RAND_MAX) * 10.0 + 5.0;
     ball->radius = 15;
     ball->gravity = true;
+    ball->ballNumber = balls->size;
 
     int mouseX, mouseY;
     Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
@@ -189,17 +190,17 @@ void handleBallCollision(Ball* ball, Ball* balls, int numBalls, Ball* borderBall
             ball->velocity = multiply(ball->velocity, VELOCITY_MODIFIER);
             balls[j].velocity = multiply(balls[j].velocity, VELOCITY_MODIFIER);
 
-            // applyRollingPhysics(ball, &balls[j]);
+            applyRollingPhysics(ball, &balls[j]);
         }
     }
 }
 
 void applyRollingPhysics(Ball* ball, Ball* otherBall) {
-    printf("%d\n", magnitude(ball->velocity));
-    // if (magnitude(ball->velocity) < VELOCITY_THRESHOLD) {
-    Vector distanceVec = subtract(otherBall->position, ball->position);
-    Vector tangent = {-distanceVec.y, distanceVec.x};  // Perpendicular to the distance vector
-    tangent = normalize(tangent);
-    ball->velocity = multiply(tangent, 0.1);  // Apply a small tangential force to simulate rolling
-    // }
+    // printf("ball number: %d, has mag. of vel.:%f\n", ball->ballNumber, magnitude(ball->velocity));
+    if (magnitude(ball->velocity) < VELOCITY_THRESHOLD) {
+        Vector distanceVec = subtract(otherBall->position, ball->position);
+        Vector tangent = {-distanceVec.y, distanceVec.x};  // Perpendicular to the distance vector
+        tangent = normalize(tangent);
+        ball->velocity = multiply(tangent, 0.1);  // Apply a small tangential force to simulate rolling
+    }
 }

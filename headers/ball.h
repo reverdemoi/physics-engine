@@ -9,6 +9,7 @@ typedef struct {
     Vector velocity;
     double radius;
     bool gravity;
+    double ballNumber;
 } Ball;
 
 typedef struct {
@@ -20,7 +21,7 @@ typedef struct {
 void initBallArray(BallArray *balls);
 void freeBallArray(BallArray *balls);
 void newBall(Ball* borderBall, BallArray* balls);
-void genBallValues(Ball* ball, Ball* borderBall);
+void genBallValues(Ball* ball, Ball* borderBall, BallArray* balls);
 double borderCollision(Ball* ball, Ball* borderBall);
 void handleOutOfBounds(Ball* ball, Ball* borderBall);
 bool collisionCheck(Ball* ball1, Ball* ball2);
