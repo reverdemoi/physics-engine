@@ -17,8 +17,9 @@
 
     1. High Priority
 
+        [] - Balls start moving like popping popcorn after a while - probably due to the ball collision handling
         [] - Generated balls sometimes get stuck in border
-        [] - Make new balls have velocity towards mouse position
+        [x] - Make new balls have velocity towards mouse position
 
     2. Medium Priority
 
@@ -59,12 +60,23 @@ int main(int argc, char* argv[]) {
         initBallArray(ballsArray);
 
         int64_t lastTick = GetTicks() / 1000000;
+    
+        Uint32 previousTicks = SDL_GetTicks();
+        Uint32 currentTicks;
+        double deltaTime;
 
         while (!exit) {
             frameStart = SDL_GetTicks();
 
             int64_t ticks = GetTicks() / 1000000;
             // printf("Ticks: %lld\n", ticks / 1000000);
+
+            // Calculate deltaTime
+            currentTicks = SDL_GetTicks();
+            deltaTime = (currentTicks - previousTicks) / 1000.0;
+            previousTicks = currentTicks;
+
+            printf("Delta time: %f\n", deltaTime);
 
             // if (ticks == lastTick + 4) {
             //     // printf("BALL ADDED");
@@ -109,39 +121,19 @@ int main(int argc, char* argv[]) {
 
             // STOP BALL FROM BOUNCING IF IT IS STUCK IN MIDDLE WITH NO X VELOCITY
             for (int i = 0; i < ballsArray->size; i++) {   
-                if (TIME_STEP == 0) {
-                    SDL_Delay(100000);
+                updateBalls(&ballsArray->balls[i], ballsArray, &borderBall, deltaTime * 5);
+
+                if (ballsArray->balls[i].angularVelocity > 0) {
+                    SDL_SetRenderDrawColor(renderer, 0x00, 0xFF, 0xFF, 0xFF); // cyan
                 }
-
-                if (round(ballsArray->balls[i].position.y) == 330 && round(ballsArray->balls[i].velocity.x * 10) / 10 == 0) {
-                    ballsArray->balls[i].velocity.x = 0;
-                    ballsArray->balls[i].velocity.y = 0;
-                } else {
-                    ballsArray->balls[i].velocity.y += GRAVITY * TIME_STEP;
+                if (ballsArray->balls[i].angularVelocity < 0) {
+                    SDL_SetRenderDrawColor(renderer, 0x4B, 0x00, 0x82, 0xFF);
                 }
-
-                // Collision thingin
-                double distance = borderCollision(&ballsArray->balls[i], &borderBall);
-                
-                // Handle ball[i] going outside border
-                handleOutOfBounds(&ballsArray->balls[i], &borderBall);
-
-                handleBallCollision(&ballsArray->balls[i], ballsArray->balls, ballsArray->size + 1, &borderBall);
-                // printf("ball[0] velocity: %f, %f\n", balls[0].velocity.x, balls[0].velocity.y);
-                // printf("ball[0] magnitude of velocity: %f\n", magnitude(balls[0].velocity));
-
-                // Update ball[i] position
-                ballsArray->balls[i].position = add(ballsArray->balls[i].position, multiply(ballsArray->balls[i].velocity, TIME_STEP));
-
-                // printf("Ball %d: posX: %f, posY: %f, velX: %f, velY: %f\n", i, ballsArray->balls[i].position.x, ballsArray->balls[i].position.y, ballsArray->balls[i].velocity.x, ballsArray->balls[i].velocity.y);
-
-                // printf("RUNNING MAIN FOR LOOP ITERATION %d\n", i);
-
-
-                ////////////////////////// IF MAGNITUDE OF VELOCITY IS LESS THAN 0.1 THEN CANCEL GRAVITY, DO THAT BY ADDING GRAVITY PROPERTY TO BALL AND ONLY ADDING GRAVITY IF THAT PROPERTY IS TRUE
-
-                SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
-                drawCircle(renderer, ballsArray->balls[i].position.x, ballsArray->balls[i].position.y, ballsArray->balls[i].radius);
+                if (ballsArray->balls[i].angularVelocity == 0) {
+                    SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
+                }
+                drawFilledCircle(renderer, ballsArray->balls[i].position.x, ballsArray->balls[i].position.y, ballsArray->balls[i].radius);
+                // drawCircle(renderer, ballsArray->balls[i].position.x, ballsArray->balls[i].position.y, ballsArray->balls[i].radius);
             }
 
 

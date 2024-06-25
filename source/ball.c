@@ -54,7 +54,9 @@ void newBall(Ball* borderBall, BallArray* balls) {
     newBall->velocity = (Vector){1, 1};
     newBall->radius = 25;
     newBall->gravity = true;
-    // genBallValues(newBall, borderBall);
+    newBall->angularVelocity = ((double)rand() / RAND_MAX) * 2.0 - 1;
+    newBall->orientation = ((double)rand() / RAND_MAX) * 2.0 * M_PI;
+    // genBallValues(newBall, borderBall, balls);
 
     printf("\n");
 }
@@ -65,7 +67,6 @@ void genBallValues(Ball* ball, Ball* borderBall, BallArray* balls) {
 
     // Generate random point inside the circle
     double angle = ((double)rand() / RAND_MAX) * 2.0 * M_PI;
-    double radius = sqrt((double)rand() / RAND_MAX) * borderBall->radius; // sqrt for uniform distribution
 
     // ball->position.x = centerX + radius * cos(angle);
     // ball->position.y = centerY + radius * sin(angle);
@@ -78,6 +79,9 @@ void genBallValues(Ball* ball, Ball* borderBall, BallArray* balls) {
     ball->radius = 15;
     ball->gravity = true;
     ball->ballNumber = balls->size;
+
+    ball->angularVelocity = ((double)rand() / RAND_MAX) * 2.0 - 1.0;
+    ball->orientation = ((double)rand() / RAND_MAX) * 2.0 * M_PI;
 
     int mouseX, mouseY;
     Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
@@ -163,7 +167,6 @@ void calculateVelocities(double mass1, Vector vel1, double mass2, Vector vel2, V
     // *newVel1 = multiply(vel1, -1);
     // *newVel2 = multiply(vel2, -1);
 }
-
 void handleBallCollision(Ball* ball, Ball* balls, int numBalls, Ball* borderBall) {
     for (int j = 0; j < numBalls; j++) {
         if (ball == &balls[j]) {
@@ -171,24 +174,39 @@ void handleBallCollision(Ball* ball, Ball* balls, int numBalls, Ball* borderBall
         }
 
         if (collisionCheck(ball, &balls[j])) {
-            // printf("BALL COLLISION\n");
-
             Vector newVel1, newVel2;
             calculateVelocities(ball->radius, ball->velocity, balls[j].radius, balls[j].velocity, &newVel1, &newVel2, ball->position, balls[j].position);
 
-            /* STAY OUTSIDE OF EACH OTHER */
+            // Stay outside of each other
             Vector collisionNormal = normalize(subtract(ball->position, balls[j].position));
             double overlap = ball->radius + balls[j].radius - magnitude(subtract(ball->position, balls[j].position));
 
-            ball->position = add(ball->position, multiply(collisionNormal, overlap / 2.0)); 
-            balls[j].position = subtract(balls[j].position, multiply(collisionNormal, overlap / 2.0));
+            // Apply only a fraction of the overlap correction to avoid excessive impulses
+            ball->position = add(ball->position, multiply(collisionNormal, overlap / 3.0)); 
+            balls[j].position = subtract(balls[j].position, multiply(collisionNormal, overlap / 3.0));
 
-            /* UPDATE VELOCITIES */
-            ball->velocity = newVel1;
-            balls[j].velocity = newVel2;
+            // Update linear velocities
+            ball->velocity = multiply(newVel1, VELOCITY_MODIFIER);
+            balls[j].velocity = multiply(newVel2, VELOCITY_MODIFIER);
 
-            ball->velocity = multiply(ball->velocity, VELOCITY_MODIFIER);
-            balls[j].velocity = multiply(balls[j].velocity, VELOCITY_MODIFIER);
+            // Calculate relative velocity at the point of contact
+            Vector r1 = multiply(collisionNormal, ball->radius);
+            Vector r2 = multiply(collisionNormal, -balls[j].radius);
+            Vector relativeVelocity = subtract(
+                add(ball->velocity, (Vector){-ball->angularVelocity * r1.y, ball->angularVelocity * r1.x}),
+                add(balls[j].velocity, (Vector){-balls[j].angularVelocity * r2.y, balls[j].angularVelocity * r2.x})
+            );
+
+            // Calculate tangential component of relative velocity
+            Vector tangent = (Vector){-collisionNormal.y, collisionNormal.x};
+            double tangentVelocity = dotProduct(relativeVelocity, tangent);
+
+            // Apply friction to simulate rolling
+            double frictionCoefficient = 0.05; // Adjust as needed
+            double frictionImpulse = tangentVelocity * frictionCoefficient;
+
+            ball->angularVelocity -= frictionImpulse / ball->radius;
+            balls[j].angularVelocity += frictionImpulse / balls[j].radius;
 
             applyRollingPhysics(ball, &balls[j]);
         }
@@ -196,11 +214,56 @@ void handleBallCollision(Ball* ball, Ball* balls, int numBalls, Ball* borderBall
 }
 
 void applyRollingPhysics(Ball* ball, Ball* otherBall) {
-    // printf("ball number: %d, has mag. of vel.:%f\n", ball->ballNumber, magnitude(ball->velocity));
     if (magnitude(ball->velocity) < VELOCITY_THRESHOLD) {
         Vector distanceVec = subtract(otherBall->position, ball->position);
         Vector tangent = {-distanceVec.y, distanceVec.x};  // Perpendicular to the distance vector
         tangent = normalize(tangent);
-        ball->velocity = multiply(tangent, 0.1);  // Apply a small tangential force to simulate rolling
+
+        // Use angular velocity to influence rolling
+        double rollingFriction = 0.01; // This value can be adjusted
+        ball->velocity = multiply(tangent, ball->angularVelocity * rollingFriction);
     }
+}
+
+
+void updateBalls(Ball* ball, BallArray* ballsArray, Ball* borderBall, double deltaTime) {
+    if (round(ball->position.y) == 330 && round(ball->velocity.x * 10) / 10 == 0) {
+        ball->velocity.x = 0;
+        ball->velocity.y = 0;
+    } else {
+        ball->velocity.y += GRAVITY * deltaTime;
+    }
+
+    // Collision thingin
+    double distance = borderCollision(ball, borderBall);
+    
+    // Handle ball[i] going outside border
+    handleOutOfBounds(ball, borderBall);
+
+    handleBallCollision(ball, ballsArray->balls, ballsArray->size + 1, borderBall);
+    // printf("ball[0] velocity: %f, %f\n", balls[0].velocity.x, balls[0].velocity.y);
+    // printf("ball[0] magnitude of velocity: %f\n", magnitude(balls[0].velocity));
+
+
+
+    // Update ball[i] position
+    ball->position = add(ball->position, multiply(ball->velocity, deltaTime));
+
+    // Update orientation based on angular velocity
+    ball->orientation += ball->angularVelocity * deltaTime;
+
+    // Ensure the orientation stays within 0 to 2*PI
+    if (ball->orientation >= 2.0 * M_PI) {
+        ball->orientation -= 2.0 * M_PI;
+    } else if (ball->orientation < 0) {
+        ball->orientation += 2.0 * M_PI;
+    }
+
+    // printf("Ball %d: posX: %f, posY: %f, velX: %f, velY: %f\n", i, ballsArray->balls[i].position.x, ballsArray->balls[i].position.y, ballsArray->balls[i].velocity.x, ballsArray->balls[i].velocity.y);
+
+    // printf("RUNNING MAIN FOR LOOP ITERATION %d\n", i);
+
+
+    ////////////////////////// IF MAGNITUDE OF VELOCITY IS LESS THAN 0.1 THEN CANCEL GRAVITY, DO THAT BY ADDING GRAVITY PROPERTY TO BALL AND ONLY ADDING GRAVITY IF THAT PROPERTY IS TRUE
+
 }
