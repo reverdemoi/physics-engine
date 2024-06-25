@@ -66,12 +66,12 @@ int main(int argc, char* argv[]) {
             int64_t ticks = GetTicks() / 1000000;
             // printf("Ticks: %lld\n", ticks / 1000000);
 
-            if (ticks == lastTick + 1) {
-                // printf("BALL ADDED");
-                lastTick = ticks;
+            // if (ticks == lastTick + 4) {
+            //     // printf("BALL ADDED");
+            //     lastTick = ticks;
 
-                newBall(&borderBall, ballsArray);
-            }
+            //     newBall(&borderBall, ballsArray);
+            // }
 
             // make background black
             SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
@@ -95,6 +95,7 @@ int main(int argc, char* argv[]) {
                     // balls[0].velocity.y = 2;
                     // balls[0].velocity.x = 1;
                     // balls = initBalls(&borderBall, numBalls);
+                    newBall(&borderBall, ballsArray);
                 }
             }
 

@@ -50,7 +50,11 @@ void newBall(Ball* borderBall, BallArray* balls) {
     printf("ball created\n");
     balls->size++;
 
-    genBallValues(newBall, borderBall);
+    newBall->position = (Vector){SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0};
+    newBall->velocity = (Vector){1, 1};
+    newBall->radius = 25;
+    newBall->gravity = true;
+    // genBallValues(newBall, borderBall);
 
     printf("\n");
 }
@@ -71,7 +75,7 @@ void genBallValues(Ball* ball, Ball* borderBall) {
     // ball->velocity.x = ((double)rand() / RAND_MAX) * 10.0 + 1.0;
     // ball->velocity.y = ((double)rand() / RAND_MAX) * 10.0 + 1.0;
     // ball->radius = ((double)rand() / RAND_MAX) * 10.0 + 5.0;
-    ball->radius = 5;
+    ball->radius = 15;
     ball->gravity = true;
 
     int mouseX, mouseY;
@@ -185,16 +189,17 @@ void handleBallCollision(Ball* ball, Ball* balls, int numBalls, Ball* borderBall
             ball->velocity = multiply(ball->velocity, VELOCITY_MODIFIER);
             balls[j].velocity = multiply(balls[j].velocity, VELOCITY_MODIFIER);
 
-            applyRollingPhysics(ball, &balls[j]);
+            // applyRollingPhysics(ball, &balls[j]);
         }
     }
 }
 
 void applyRollingPhysics(Ball* ball, Ball* otherBall) {
-    if (magnitude(ball->velocity) < VELOCITY_THRESHOLD) {
-        Vector distanceVec = subtract(otherBall->position, ball->position);
-        Vector tangent = {-distanceVec.y, distanceVec.x};  // Perpendicular to the distance vector
-        tangent = normalize(tangent);
-        ball->velocity = multiply(tangent, 0.1);  // Apply a small tangential force to simulate rolling
-    }
+    printf("%d\n", magnitude(ball->velocity));
+    // if (magnitude(ball->velocity) < VELOCITY_THRESHOLD) {
+    Vector distanceVec = subtract(otherBall->position, ball->position);
+    Vector tangent = {-distanceVec.y, distanceVec.x};  // Perpendicular to the distance vector
+    tangent = normalize(tangent);
+    ball->velocity = multiply(tangent, 0.1);  // Apply a small tangential force to simulate rolling
+    // }
 }
