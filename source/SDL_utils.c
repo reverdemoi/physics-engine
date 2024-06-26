@@ -1,6 +1,7 @@
 #include "SDL_utils.h"
 #include "common.h"
 #include <stdio.h>
+#include <windows.h>
 
 SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
@@ -87,4 +88,5 @@ void closeApp() {
     SDL_DestroyWindow(window);
     SDL_DestroyRenderer(renderer);
     SDL_Quit();
+    exit(EXIT_FAILURE);
 }

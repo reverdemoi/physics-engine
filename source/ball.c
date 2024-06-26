@@ -14,10 +14,10 @@ void initBallArray(BallArray *balls) {
     balls->balls = (Ball*)malloc(sizeof(Ball));
     if (balls->balls == NULL) {
         perror("Initial malloc failed");
-        exit(EXIT_FAILURE); // Exit the program if the function fails
+        closeApp();
     }
     balls->size = 0;
-    balls->capacity = 0;
+    balls->capacity = 1;
 }
 
 void freeBallArray(BallArray *balls) {
@@ -30,59 +30,31 @@ void newBall(Ball* borderBall, BallArray* balls) {
     *borderBall = (Ball){{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2}, {0, 0}, 250};
     
     if (balls->size >= balls->capacity) {
-        balls->capacity++;
-        printf("Resized array to %d\n", balls->capacity);
+        balls->capacity *= 2;
+        // printf("Resized array to %d\n", balls->capacity);
         Ball* newBalls = (Ball*)realloc(balls->balls, balls->capacity * sizeof(Ball));
         if (newBalls == NULL) {
             printf("realloc failure\n");
             freeBallArray(balls);
             free(balls);
             closeApp();
-            exit(EXIT_FAILURE);
             return;
         }
 
         balls->balls = newBalls;
     }
-
-    printf("New ball created at position: %i\n", balls->size);
     Ball *newBall = &balls->balls[balls->size];
-    printf("ball created\n");
     balls->size++;
 
-    /* DEBUG */
-    // int mouseX, mouseY;
-    // Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
-    // newBall->position.x = mouseX;
-    // newBall->position.y = mouseY;
-    // // newBall->position = (Vector){SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0};
-    // newBall->velocity = (Vector){1, 1};
-    // newBall->radius = 25;
-    // newBall->gravity = true;
-    // newBall->angularVelocity = ((double)rand() / RAND_MAX) * 2.0 - 1;
-    // newBall->orientation = ((double)rand() / RAND_MAX) * 2.0 * M_PI;
-    // newBall->ballNumber = balls->size;
-
     genBallValues(newBall, borderBall, balls);
-    printf("\n");
 }
 
 void genBallValues(Ball* ball, Ball* borderBall, BallArray* balls) {
     double centerX = SCREEN_WIDTH / 2.0;
     double centerY = SCREEN_HEIGHT / 2.0;
 
-    // Generate random point inside the circle
-    double angle = ((double)rand() / RAND_MAX) * 2.0 * M_PI;
-
-    // ball->position.x = centerX + radius * cos(angle);
-    // ball->position.y = centerY + radius * sin(angle);
     ball->position = (Vector){centerX, centerY};
-
-    // Random velocity and radius
-    // ball->velocity.x = ((double)rand() / RAND_MAX) * 10.0 + 1.0;
-    // ball->velocity.y = ((double)rand() / RAND_MAX) * 10.0 + 1.0;
-    // ball->radius = ((double)rand() / RAND_MAX) * 10.0 + 5.0;
-    ball->radius = 15;
+    ball->radius = 10;
     ball->gravity = true;
     ball->ballNumber = balls->size;
 
@@ -90,7 +62,7 @@ void genBallValues(Ball* ball, Ball* borderBall, BallArray* balls) {
     Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
     Vector mouseVec = {mouseX, mouseY};
 
-    // Calculate the angle between the mouse and the center of the circle
+    // Ball goes towards mouse
     Vector normal = normalize(subtract(mouseVec, borderBall->position));
     ball->velocity = multiply(normal, 100.0);
 }
@@ -106,9 +78,6 @@ double borderCollision(Ball* ball, Ball* borderBall) {
         ball->velocity = subtract(ball->velocity, scaledNormal);
 
         ball->velocity = multiply(ball->velocity, VELOCITY_MODIFIER);
-
-        // DEBUG
-        // printf("velX: %f, velY: %f, posX: %f, posY: %f\n", ball->velocity.x, ball->velocity.y, ball->position.x, ball->position.y);
     }
 
     return distance;
@@ -151,6 +120,7 @@ bool collisionCheck(Ball* ball1, Ball* ball2) {
 }
 
 void calculateVelocities(double mass1, Vector vel1, double mass2, Vector vel2, Vector *newVel1, Vector *newVel2, Vector r1, Vector r2) {
+    /* CHARREN KOKADE HÄR */
     Vector r = subtract(r2, r1);
     Vector vel = subtract(vel2, vel1);
 
@@ -166,9 +136,6 @@ void calculateVelocities(double mass1, Vector vel1, double mass2, Vector vel2, V
 
     *newVel1 = add(vel1, multiply(normal, 2 * mass2 / (mass1 + mass2) * v_rel_n));
     *newVel2 = subtract(vel2, multiply(normal, 2 * mass1 / (mass1 + mass2) * v_rel_n));
-
-    // *newVel1 = multiply(vel1, -1);
-    // *newVel2 = multiply(vel2, -1);
 }
 void handleBallCollision(Ball* ball, Ball* balls, int numBalls, Ball* borderBall) {
     for (int j = 0; j < numBalls; j++) {
@@ -183,13 +150,9 @@ void handleBallCollision(Ball* ball, Ball* balls, int numBalls, Ball* borderBall
             // Stay outside of each other
             Vector collisionNormal = normalize(subtract(ball->position, balls[j].position));
             double overlap = ball->radius + balls[j].radius - magnitude(subtract(ball->position, balls[j].position));
+            ball->position = add(ball->position, multiply(collisionNormal, overlap / 2));  
+            balls[j].position = subtract(balls[j].position, multiply(collisionNormal, overlap / 2));
 
-            // Apply only a fraction of the overlap correction to avoid excessive impulses
-            double correctionFactor = 0.5;
-            ball->position = add(ball->position, multiply(collisionNormal, overlap * correctionFactor));  
-            balls[j].position = subtract(balls[j].position, multiply(collisionNormal, overlap * correctionFactor));
-
-            // Update linear velocities
             ball->velocity = multiply(newVel1, VELOCITY_MODIFIER);
             balls[j].velocity = multiply(newVel2, VELOCITY_MODIFIER);
         }
@@ -197,12 +160,7 @@ void handleBallCollision(Ball* ball, Ball* balls, int numBalls, Ball* borderBall
 }
 
 void updateBalls(Ball* ball, BallArray* ballsArray, Ball* borderBall, double deltaTime) {
-    if (round(ball->position.y) == 330 && round(ball->velocity.x * 10) / 10 == 0) {
-        ball->velocity.x = 0;
-        ball->velocity.y = 0;
-    } else {
-        ball->velocity.y += pow(GRAVITY, 2) * deltaTime;
-    }
+    ball->velocity.y += pow(GRAVITY, 2) * deltaTime;
 
     double distance = borderCollision(ball, borderBall);    
     handleOutOfBounds(ball, borderBall);
@@ -210,3 +168,5 @@ void updateBalls(Ball* ball, BallArray* ballsArray, Ball* borderBall, double del
 
     ball->position = add(ball->position, multiply(ball->velocity, deltaTime));
 }
+
+// I THINK THE EXCESSIVE JITTERING IS BECAUSE THE BALLS ACCIDENTLY GO HALFWAY THROUGH EACH OTHER WHICH WILL RESULT IN THE OVERLAP VELOCITY CHANGE TO THROW THEM EACH AT THE OTHER ONES DIRECTION - CAUSING MASS EXCESSIVE JITTERING
