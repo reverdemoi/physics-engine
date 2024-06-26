@@ -86,3 +86,76 @@
             //         ball->position.y = borderBall->position.y + radius * sin(angle);
             //   } 
             */
+
+
+
+/* ANGULAR VELOCITY */
+
+// In handleBallCollisions()
+/* 
+// Calculate relative velocity at the point of contact
+    Vector r1 = multiply(collisionNormal, ball->radius);
+    Vector r2 = multiply(collisionNormal, -balls[j].radius);
+    Vector relativeVelocity = subtract(
+        add(ball->velocity, (Vector){-ball->angularVelocity * r1.y, ball->angularVelocity * r1.x}),
+        add(balls[j].velocity, (Vector){-balls[j].angularVelocity * r2.y, balls[j].angularVelocity * r2.x})
+    );
+
+    // Calculate tangential component of relative velocity
+    Vector tangent = (Vector){-collisionNormal.y, collisionNormal.x};
+    double tangentVelocity = dotProduct(relativeVelocity, tangent);
+
+    // Apply friction to simulate rolling
+    double frictionCoefficient = 0.05; // Adjust as needed
+    double frictionImpulse = tangentVelocity * frictionCoefficient;
+
+    ball->angularVelocity -= frictionImpulse / ball->radius;
+    balls[j].angularVelocity += frictionImpulse / balls[j].radius;
+
+    // applyRollingPhysics(ball, &balls[j]); 
+*/
+
+// In applyRollingPhysics()
+/*
+void applyRollingPhysics(Ball* ball, Ball* otherBall) {
+    if (magnitude(ball->velocity) < VELOCITY_THRESHOLD) {
+        printf("%f IS ROLLING AGAINST %f\n", ball->ballNumber, otherBall->ballNumber);
+
+        Vector distanceVec = subtract(ball->position, otherBall->position);
+        Vector tangent = {distanceVec.y, -distanceVec.x};  // Perpendicular to the distance vector
+        tangent = normalize(tangent);
+        printf("tangent: %f, %f\n", tangent.x, tangent.y);
+
+        // Use angular velocity to influence rolling
+        double rollingFriction = 0.5; // This value can be adjusted
+        printf("angularVelocity: %f\n", ball->angularVelocity);
+        ball->velocity = multiply(tangent, ball->angularVelocity);
+        ball->velocity = multiply(ball->velocity, -1);
+
+        double angularDamping = 0.99;
+        ball->angularVelocity *= angularDamping;
+
+        printf("\n");
+    }
+}
+*/
+
+// In updateBalls()
+/*  
+ball->orientation += ball->angularVelocity * deltaTime;
+
+// Ensure the orientation stays within 0 to 2*PI
+if (ball->orientation >= 2.0 * M_PI) {
+    ball->orientation -= 2.0 * M_PI;
+} else if (ball->orientation < 0) {
+    ball->orientation += 2.0 * M_PI;
+}
+*/
+
+// In genBallValues()
+// ball->angularVelocity = ((double)rand() / RAND_MAX) * 2.0 - 1.0;
+// ball->orientation = ((double)rand() / RAND_MAX) * 2.0 * M_PI;
+
+// In ball.h struct of ball
+// double angularVelocity; // radians per second
+// double orientation; // radians
