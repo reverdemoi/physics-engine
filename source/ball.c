@@ -50,12 +50,17 @@ void newBall(Ball* borderBall, BallArray* balls) {
     printf("ball created\n");
     balls->size++;
 
-    newBall->position = (Vector){SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0};
+    int mouseX, mouseY;
+    Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
+    newBall->position.x = mouseX;
+    newBall->position.y = mouseY;
+    // newBall->position = (Vector){SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0};
     newBall->velocity = (Vector){1, 1};
     newBall->radius = 25;
     newBall->gravity = true;
     newBall->angularVelocity = ((double)rand() / RAND_MAX) * 2.0 - 1;
     newBall->orientation = ((double)rand() / RAND_MAX) * 2.0 * M_PI;
+    newBall->ballNumber = balls->size;
     // genBallValues(newBall, borderBall, balls);
 
     printf("\n");
@@ -182,8 +187,9 @@ void handleBallCollision(Ball* ball, Ball* balls, int numBalls, Ball* borderBall
             double overlap = ball->radius + balls[j].radius - magnitude(subtract(ball->position, balls[j].position));
 
             // Apply only a fraction of the overlap correction to avoid excessive impulses
-            ball->position = add(ball->position, multiply(collisionNormal, overlap / 3.0)); 
-            balls[j].position = subtract(balls[j].position, multiply(collisionNormal, overlap / 3.0));
+            double correctionFactor = 0.5;
+            ball->position = add(ball->position, multiply(collisionNormal, overlap * correctionFactor));  
+            balls[j].position = subtract(balls[j].position, multiply(collisionNormal, overlap * correctionFactor));
 
             // Update linear velocities
             ball->velocity = multiply(newVel1, VELOCITY_MODIFIER);
@@ -215,13 +221,21 @@ void handleBallCollision(Ball* ball, Ball* balls, int numBalls, Ball* borderBall
 
 void applyRollingPhysics(Ball* ball, Ball* otherBall) {
     if (magnitude(ball->velocity) < VELOCITY_THRESHOLD) {
+        printf("%f IS ROLLING AGAINST %f\n", ball->ballNumber, otherBall->ballNumber);
+
         Vector distanceVec = subtract(otherBall->position, ball->position);
         Vector tangent = {-distanceVec.y, distanceVec.x};  // Perpendicular to the distance vector
         tangent = normalize(tangent);
+        printf("tangent: %f, %f\n", tangent.x, tangent.y);
 
         // Use angular velocity to influence rolling
-        double rollingFriction = 0.01; // This value can be adjusted
-        ball->velocity = multiply(tangent, ball->angularVelocity * rollingFriction);
+        double rollingFriction = 0.5; // This value can be adjusted
+        printf("angularVelocity: %f\n", ball->angularVelocity);
+        ball->velocity = multiply(tangent, ball->angularVelocity * 10);
+        ball->velocity = multiply(ball->velocity, -1);
+
+        double angularDamping = 0.99;
+        ball->angularVelocity *= angularDamping;
     }
 }
 
@@ -234,22 +248,11 @@ void updateBalls(Ball* ball, BallArray* ballsArray, Ball* borderBall, double del
         ball->velocity.y += GRAVITY * deltaTime;
     }
 
-    // Collision thingin
-    double distance = borderCollision(ball, borderBall);
-    
-    // Handle ball[i] going outside border
+    double distance = borderCollision(ball, borderBall);    
     handleOutOfBounds(ball, borderBall);
-
     handleBallCollision(ball, ballsArray->balls, ballsArray->size + 1, borderBall);
-    // printf("ball[0] velocity: %f, %f\n", balls[0].velocity.x, balls[0].velocity.y);
-    // printf("ball[0] magnitude of velocity: %f\n", magnitude(balls[0].velocity));
 
-
-
-    // Update ball[i] position
     ball->position = add(ball->position, multiply(ball->velocity, deltaTime));
-
-    // Update orientation based on angular velocity
     ball->orientation += ball->angularVelocity * deltaTime;
 
     // Ensure the orientation stays within 0 to 2*PI
@@ -258,12 +261,4 @@ void updateBalls(Ball* ball, BallArray* ballsArray, Ball* borderBall, double del
     } else if (ball->orientation < 0) {
         ball->orientation += 2.0 * M_PI;
     }
-
-    // printf("Ball %d: posX: %f, posY: %f, velX: %f, velY: %f\n", i, ballsArray->balls[i].position.x, ballsArray->balls[i].position.y, ballsArray->balls[i].velocity.x, ballsArray->balls[i].velocity.y);
-
-    // printf("RUNNING MAIN FOR LOOP ITERATION %d\n", i);
-
-
-    ////////////////////////// IF MAGNITUDE OF VELOCITY IS LESS THAN 0.1 THEN CANCEL GRAVITY, DO THAT BY ADDING GRAVITY PROPERTY TO BALL AND ONLY ADDING GRAVITY IF THAT PROPERTY IS TRUE
-
 }

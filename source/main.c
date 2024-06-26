@@ -66,17 +66,13 @@ int main(int argc, char* argv[]) {
         double deltaTime;
 
         while (!exit) {
+            // Calculate deltaTime & FPS
             frameStart = SDL_GetTicks();
-
             int64_t ticks = GetTicks() / 1000000;
-            // printf("Ticks: %lld\n", ticks / 1000000);
-
-            // Calculate deltaTime
             currentTicks = SDL_GetTicks();
             deltaTime = (currentTicks - previousTicks) / 1000.0;
             previousTicks = currentTicks;
-
-            printf("Delta time: %f\n", deltaTime);
+            // printf("Delta time: %f\n", deltaTime);
 
             // if (ticks == lastTick + 4) {
             //     // printf("BALL ADDED");
@@ -111,15 +107,6 @@ int main(int argc, char* argv[]) {
                 }
             }
 
-            // numBalls++;
-
-            // Fine test of using delta time, didnt work :(
-            // Uint32 currentTime = SDL_GetTicks();
-            // double deltaTime = currentTime - lastTime / 1000;
-            // lastTime = currentTime;
-
-
-            // STOP BALL FROM BOUNCING IF IT IS STUCK IN MIDDLE WITH NO X VELOCITY
             for (int i = 0; i < ballsArray->size; i++) {   
                 updateBalls(&ballsArray->balls[i], ballsArray, &borderBall, deltaTime * 5);
 
@@ -127,19 +114,21 @@ int main(int argc, char* argv[]) {
                     SDL_SetRenderDrawColor(renderer, 0x00, 0xFF, 0xFF, 0xFF); // cyan
                 }
                 if (ballsArray->balls[i].angularVelocity < 0) {
-                    SDL_SetRenderDrawColor(renderer, 0x4B, 0x00, 0x82, 0xFF);
+                    SDL_SetRenderDrawColor(renderer, 0x4B, 0x00, 0x82, 0xFF); // purple
                 }
                 if (ballsArray->balls[i].angularVelocity == 0) {
-                    SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
+                    SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF); // black
                 }
                 drawFilledCircle(renderer, ballsArray->balls[i].position.x, ballsArray->balls[i].position.y, ballsArray->balls[i].radius);
                 // drawCircle(renderer, ballsArray->balls[i].position.x, ballsArray->balls[i].position.y, ballsArray->balls[i].radius);
             }
-
+    
+            printf("\n");
 
             // Update screen
             SDL_RenderPresent(renderer);
 
+            // FPS Counter
             frameTime = SDL_GetTicks() - frameStart;
             frameCount++;
             if (frameTime > 0) {
@@ -150,8 +139,8 @@ int main(int argc, char* argv[]) {
                 // printf("FPS: %f\n", fps);
             }
 
-            // Delay for approx. 30 fps
-            SDL_Delay(16) ; // 32 ms
+            // Delay for approx. 60 fps
+            SDL_Delay(16); // 16 ms
         }
         free(ballsArray);
 
