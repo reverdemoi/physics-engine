@@ -50,19 +50,20 @@ void newBall(Ball* borderBall, BallArray* balls) {
     printf("ball created\n");
     balls->size++;
 
-    int mouseX, mouseY;
-    Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
-    newBall->position.x = mouseX;
-    newBall->position.y = mouseY;
-    // newBall->position = (Vector){SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0};
-    newBall->velocity = (Vector){1, 1};
-    newBall->radius = 25;
-    newBall->gravity = true;
-    newBall->angularVelocity = ((double)rand() / RAND_MAX) * 2.0 - 1;
-    newBall->orientation = ((double)rand() / RAND_MAX) * 2.0 * M_PI;
-    newBall->ballNumber = balls->size;
-    // genBallValues(newBall, borderBall, balls);
+    /* DEBUG */
+    // int mouseX, mouseY;
+    // Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
+    // newBall->position.x = mouseX;
+    // newBall->position.y = mouseY;
+    // // newBall->position = (Vector){SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0};
+    // newBall->velocity = (Vector){1, 1};
+    // newBall->radius = 25;
+    // newBall->gravity = true;
+    // newBall->angularVelocity = ((double)rand() / RAND_MAX) * 2.0 - 1;
+    // newBall->orientation = ((double)rand() / RAND_MAX) * 2.0 * M_PI;
+    // newBall->ballNumber = balls->size;
 
+    genBallValues(newBall, borderBall, balls);
     printf("\n");
 }
 
@@ -85,16 +86,13 @@ void genBallValues(Ball* ball, Ball* borderBall, BallArray* balls) {
     ball->gravity = true;
     ball->ballNumber = balls->size;
 
-    ball->angularVelocity = ((double)rand() / RAND_MAX) * 2.0 - 1.0;
-    ball->orientation = ((double)rand() / RAND_MAX) * 2.0 * M_PI;
-
     int mouseX, mouseY;
     Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
     Vector mouseVec = {mouseX, mouseY};
 
     // Calculate the angle between the mouse and the center of the circle
     Vector normal = normalize(subtract(mouseVec, borderBall->position));
-    ball->velocity = multiply(normal, 50.0);
+    ball->velocity = multiply(normal, 100.0);
 }
 
 double borderCollision(Ball* ball, Ball* borderBall) {
@@ -194,58 +192,16 @@ void handleBallCollision(Ball* ball, Ball* balls, int numBalls, Ball* borderBall
             // Update linear velocities
             ball->velocity = multiply(newVel1, VELOCITY_MODIFIER);
             balls[j].velocity = multiply(newVel2, VELOCITY_MODIFIER);
-
-            // Calculate relative velocity at the point of contact
-            Vector r1 = multiply(collisionNormal, ball->radius);
-            Vector r2 = multiply(collisionNormal, -balls[j].radius);
-            Vector relativeVelocity = subtract(
-                add(ball->velocity, (Vector){-ball->angularVelocity * r1.y, ball->angularVelocity * r1.x}),
-                add(balls[j].velocity, (Vector){-balls[j].angularVelocity * r2.y, balls[j].angularVelocity * r2.x})
-            );
-
-            // Calculate tangential component of relative velocity
-            Vector tangent = (Vector){-collisionNormal.y, collisionNormal.x};
-            double tangentVelocity = dotProduct(relativeVelocity, tangent);
-
-            // Apply friction to simulate rolling
-            double frictionCoefficient = 0.05; // Adjust as needed
-            double frictionImpulse = tangentVelocity * frictionCoefficient;
-
-            ball->angularVelocity -= frictionImpulse / ball->radius;
-            balls[j].angularVelocity += frictionImpulse / balls[j].radius;
-
-            applyRollingPhysics(ball, &balls[j]);
         }
     }
 }
-
-void applyRollingPhysics(Ball* ball, Ball* otherBall) {
-    if (magnitude(ball->velocity) < VELOCITY_THRESHOLD) {
-        printf("%f IS ROLLING AGAINST %f\n", ball->ballNumber, otherBall->ballNumber);
-
-        Vector distanceVec = subtract(otherBall->position, ball->position);
-        Vector tangent = {-distanceVec.y, distanceVec.x};  // Perpendicular to the distance vector
-        tangent = normalize(tangent);
-        printf("tangent: %f, %f\n", tangent.x, tangent.y);
-
-        // Use angular velocity to influence rolling
-        double rollingFriction = 0.5; // This value can be adjusted
-        printf("angularVelocity: %f\n", ball->angularVelocity);
-        ball->velocity = multiply(tangent, ball->angularVelocity * 10);
-        ball->velocity = multiply(ball->velocity, -1);
-
-        double angularDamping = 0.99;
-        ball->angularVelocity *= angularDamping;
-    }
-}
-
 
 void updateBalls(Ball* ball, BallArray* ballsArray, Ball* borderBall, double deltaTime) {
     if (round(ball->position.y) == 330 && round(ball->velocity.x * 10) / 10 == 0) {
         ball->velocity.x = 0;
         ball->velocity.y = 0;
     } else {
-        ball->velocity.y += GRAVITY * deltaTime;
+        ball->velocity.y += pow(GRAVITY, 2) * deltaTime;
     }
 
     double distance = borderCollision(ball, borderBall);    
@@ -253,12 +209,4 @@ void updateBalls(Ball* ball, BallArray* ballsArray, Ball* borderBall, double del
     handleBallCollision(ball, ballsArray->balls, ballsArray->size + 1, borderBall);
 
     ball->position = add(ball->position, multiply(ball->velocity, deltaTime));
-    ball->orientation += ball->angularVelocity * deltaTime;
-
-    // Ensure the orientation stays within 0 to 2*PI
-    if (ball->orientation >= 2.0 * M_PI) {
-        ball->orientation -= 2.0 * M_PI;
-    } else if (ball->orientation < 0) {
-        ball->orientation += 2.0 * M_PI;
-    }
 }

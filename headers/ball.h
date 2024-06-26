@@ -10,8 +10,6 @@ typedef struct {
     double radius;
     bool gravity;
     double ballNumber;
-    double angularVelocity; // radians per second
-    double orientation; // radians
 } Ball;
 
 typedef struct {

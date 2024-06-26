@@ -74,12 +74,12 @@ int main(int argc, char* argv[]) {
             previousTicks = currentTicks;
             // printf("Delta time: %f\n", deltaTime);
 
-            // if (ticks == lastTick + 4) {
-            //     // printf("BALL ADDED");
-            //     lastTick = ticks;
+            if (ticks == lastTick + 4) {
+                // printf("BALL ADDED");
+                lastTick = ticks;
 
-            //     newBall(&borderBall, ballsArray);
-            // }
+                newBall(&borderBall, ballsArray);
+            }
 
             // make background black
             SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
@@ -110,20 +110,10 @@ int main(int argc, char* argv[]) {
             for (int i = 0; i < ballsArray->size; i++) {   
                 updateBalls(&ballsArray->balls[i], ballsArray, &borderBall, deltaTime * 5);
 
-                if (ballsArray->balls[i].angularVelocity > 0) {
-                    SDL_SetRenderDrawColor(renderer, 0x00, 0xFF, 0xFF, 0xFF); // cyan
-                }
-                if (ballsArray->balls[i].angularVelocity < 0) {
-                    SDL_SetRenderDrawColor(renderer, 0x4B, 0x00, 0x82, 0xFF); // purple
-                }
-                if (ballsArray->balls[i].angularVelocity == 0) {
-                    SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF); // black
-                }
-                drawFilledCircle(renderer, ballsArray->balls[i].position.x, ballsArray->balls[i].position.y, ballsArray->balls[i].radius);
-                // drawCircle(renderer, ballsArray->balls[i].position.x, ballsArray->balls[i].position.y, ballsArray->balls[i].radius);
+                SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF); // black
+                // drawFilledCircle(renderer, ballsArray->balls[i].position.x, ballsArray->balls[i].position.y, ballsArray->balls[i].radius);
+                drawCircle(renderer, ballsArray->balls[i].position.x, ballsArray->balls[i].position.y, ballsArray->balls[i].radius);
             }
-    
-            printf("\n");
 
             // Update screen
             SDL_RenderPresent(renderer);
