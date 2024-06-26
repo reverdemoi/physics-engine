@@ -92,7 +92,6 @@
 /* ANGULAR VELOCITY */
 
 // In handleBallCollisions()
-/* 
 // Calculate relative velocity at the point of contact
     Vector r1 = multiply(collisionNormal, ball->radius);
     Vector r2 = multiply(collisionNormal, -balls[j].radius);
@@ -113,10 +112,8 @@
     balls[j].angularVelocity += frictionImpulse / balls[j].radius;
 
     // applyRollingPhysics(ball, &balls[j]); 
-*/
 
 // In applyRollingPhysics()
-/*
 void applyRollingPhysics(Ball* ball, Ball* otherBall) {
     if (magnitude(ball->velocity) < VELOCITY_THRESHOLD) {
         printf("%f IS ROLLING AGAINST %f\n", ball->ballNumber, otherBall->ballNumber);
@@ -138,10 +135,8 @@ void applyRollingPhysics(Ball* ball, Ball* otherBall) {
         printf("\n");
     }
 }
-*/
 
 // In updateBalls()
-/*  
 ball->orientation += ball->angularVelocity * deltaTime;
 
 // Ensure the orientation stays within 0 to 2*PI
@@ -150,12 +145,35 @@ if (ball->orientation >= 2.0 * M_PI) {
 } else if (ball->orientation < 0) {
     ball->orientation += 2.0 * M_PI;
 }
-*/
+
 
 // In genBallValues()
-// ball->angularVelocity = ((double)rand() / RAND_MAX) * 2.0 - 1.0;
-// ball->orientation = ((double)rand() / RAND_MAX) * 2.0 * M_PI;
+ball->angularVelocity = ((double)rand() / RAND_MAX) * 2.0 - 1.0;
+ball->orientation = ((double)rand() / RAND_MAX) * 2.0 * M_PI;
 
 // In ball.h struct of ball
-// double angularVelocity; // radians per second
-// double orientation; // radians
+double angularVelocity; // radians per second
+double orientation; // radians
+
+
+/* FIX FOR SINGLE BALL JITTERING AT BOTTOM CENTER */
+// this took me way too long to figure out and didnt have the heart to just scratch it so I'm leaving it here
+if (round(ball->position.y) == 330 && round(ball->velocity.x * 10) / 10 == 0) {
+    ball->velocity.x = 0;
+    ball->velocity.y = 0;
+} else {
+    ball->velocity.y += pow(GRAVITY, 2) * deltaTime;
+}
+
+/* DEBUG IN newBall() */
+int mouseX, mouseY;
+Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
+newBall->position.x = mouseX;
+newBall->position.y = mouseY;
+// newBall->position = (Vector){SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0};
+newBall->velocity = (Vector){1, 1};
+newBall->radius = 25;
+newBall->gravity = true;
+newBall->angularVelocity = ((double)rand() / RAND_MAX) * 2.0 - 1;
+newBall->orientation = ((double)rand() / RAND_MAX) * 2.0 * M_PI;
+newBall->ballNumber = balls->size;
