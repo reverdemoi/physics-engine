@@ -27,7 +27,7 @@ void freeBallArray(BallArray *balls) {
 }
 
 void newBall(Ball* borderBall, BallArray* balls) {
-    *borderBall = (Ball){{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2}, {0, 0}, 500};
+    *borderBall = (Ball){{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2}, {0, 0}, 250};
     
     if (balls->size >= balls->capacity) {
         balls->capacity *= 2;
@@ -53,7 +53,7 @@ void genBallValues(Ball* ball, Ball* borderBall, BallArray* balls) {
     double centerX = SCREEN_WIDTH / 2.0;
     double centerY = SCREEN_HEIGHT / 2.0;
 
-    ball->position = (Vector){centerX, centerY};
+    ball->position = (Vector){centerX, SCREEN_HEIGHT / 2 - 230};
     ball->radius = 10;
     ball->gravity = true;
     ball->ballNumber = balls->size;
@@ -159,19 +159,27 @@ void handleBallCollision(Ball* ball, Ball* balls, int numBalls, Ball* borderBall
     }
 }
 
-void updateBalls(Ball* ball, BallArray* ballsArray, Ball* borderBall, double deltaTime) {
+void drawBalls(SDL_Renderer* renderer, BallArray* ballsArray) {
+    for (int i = 0; i < ballsArray->size; i++) {    
+        SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF); 
+        drawCircle(renderer, ballsArray->balls[i].position.x, ballsArray->balls[i].position.y, ballsArray->balls[i].radius);
+    }
+}
+
+void updateBall(Ball* ball, BallArray* ballsArray, Ball* borderBall, double deltaTime) {
     if (round(ball->position.y) == 330 && round(ball->velocity.x * 10) / 10 == 0) {
         ball->velocity.x = 0;
         ball->velocity.y = 0;
     } else {
-        ball->velocity.y += pow(GRAVITY, 2) * deltaTime;
+        ball->velocity.y += GRAVITY * deltaTime;
     }
 
+    ball->position = add(ball->position, multiply(ball->velocity, deltaTime));
+    
     double distance = borderCollision(ball, borderBall);    
     handleOutOfBounds(ball, borderBall);
+    
     handleBallCollision(ball, ballsArray->balls, ballsArray->size + 1, borderBall);
-
-    ball->position = add(ball->position, multiply(ball->velocity, deltaTime));
 }
 
 // I THINK THE EXCESSIVE JITTERING IS BECAUSE THE BALLS ACCIDENTLY GO HALFWAY THROUGH EACH OTHER WHICH WILL RESULT IN THE OVERLAP VELOCITY CHANGE TO THROW THEM EACH AT THE OTHER ONES DIRECTION - CAUSING MASS EXCESSIVE JITTERING

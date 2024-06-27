@@ -17,10 +17,14 @@
 
     1. High Priority
 
-        [] - Generated balls sometimes get stuck in border
-            --> not necessarily fixed, now using a different method of spawning new balls in which makes this an irrelevant issue
+        [] - After a while balls start jittering like crazy
+            --> substeps 
+                --> caused issues with gravity and weirdly tweaked values
+                    [] - Separate velocity into velocity and acceleration
         [x] - Balls start moving like popping popcorn after a while - probably due to the ball collision handling
         [x] - Make new balls have velocity towards mouse position
+        [] - Generated balls sometimes get stuck in border
+            --> not necessarily fixed, now using a different method of spawning new balls in which makes this an irrelevant issue
 
     2. Medium Priority
 
@@ -30,9 +34,11 @@
     3. Low Priority
 
         [] - Values has to be tweaked
-        [] - Ball dissapears after collision - only seen once
+        [] - Ball dissapears after collision - only seen a couple of times
 
 */
+
+#define SUBSTEPS 5
 
 static inline int64_t GetTicks() {
     LARGE_INTEGER ticks;
@@ -78,6 +84,8 @@ int main(int argc, char* argv[]) {
         deltaTime = (currentTicks - previousTicks) / 1000.0;
         previousTicks = currentTicks;
 
+        double deltaTimeChunk = deltaTime / SUBSTEPS;
+
         if (ticks == lastTick + 2) {
             lastTick = ticks;
             newBall(&borderBall, ballsArray);
@@ -97,12 +105,14 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        for (int i = 0; i < ballsArray->size; i++) {   
-            updateBalls(&ballsArray->balls[i], ballsArray, &borderBall, deltaTime * 5);
-
-            SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF); 
-            drawCircle(renderer, ballsArray->balls[i].position.x, ballsArray->balls[i].position.y, ballsArray->balls[i].radius);
+        // SUBSTEP loop
+        for (int step = 0; step < SUBSTEPS; step++) {
+            for (int i = 0; i < ballsArray->size; i++) {   
+                updateBall(&ballsArray->balls[i], ballsArray, &borderBall, deltaTimeChunk);
+            }
         }
+
+        drawBalls(renderer, ballsArray);
 
         // Update screen
         SDL_RenderPresent(renderer);
@@ -119,7 +129,6 @@ int main(int argc, char* argv[]) {
         }
 
         // Delay for approx. 60 fps
-        // For some reason this is fucking important for the balls to move properly even when using deltaTime
         SDL_Delay(16); // 16 ms
     }
     free(ballsArray);
