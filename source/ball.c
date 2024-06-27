@@ -27,7 +27,7 @@ void freeBallArray(BallArray *balls) {
 }
 
 void newBall(Ball* borderBall, BallArray* balls) {
-    *borderBall = (Ball){{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2}, {0, 0}, 250};
+    *borderBall = (Ball){{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2}, {0, 0}, 500};
     
     if (balls->size >= balls->capacity) {
         balls->capacity *= 2;
@@ -160,7 +160,12 @@ void handleBallCollision(Ball* ball, Ball* balls, int numBalls, Ball* borderBall
 }
 
 void updateBalls(Ball* ball, BallArray* ballsArray, Ball* borderBall, double deltaTime) {
-    ball->velocity.y += pow(GRAVITY, 2) * deltaTime;
+    if (round(ball->position.y) == 330 && round(ball->velocity.x * 10) / 10 == 0) {
+        ball->velocity.x = 0;
+        ball->velocity.y = 0;
+    } else {
+        ball->velocity.y += pow(GRAVITY, 2) * deltaTime;
+    }
 
     double distance = borderCollision(ball, borderBall);    
     handleOutOfBounds(ball, borderBall);
