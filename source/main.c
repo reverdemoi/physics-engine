@@ -34,6 +34,11 @@
 
 */
 
+#ifndef SUBSTEPS
+#define SUBSTEPS 2
+#endif
+
+
 static inline int64_t GetTicks() {
     LARGE_INTEGER ticks;
     if (!QueryPerformanceCounter(&ticks)) {
@@ -70,15 +75,17 @@ int main(int argc, char* argv[]) {
     Uint32 previousTicks = SDL_GetTicks();
     Uint32 currentTicks;
     double deltaTime;
+    double deltaTimeChunk;
 
     while (!exit) {
         // Calculate deltaTime, FPS & spawning new balls
         int64_t ticks = GetTicks() / 1000000;
         currentTicks = SDL_GetTicks();
-        deltaTime = (currentTicks - previousTicks) / 1000.0;
+        deltaTime = (currentTicks - previousTicks) / 100.0;
         previousTicks = currentTicks;
+        deltaTimeChunk = deltaTime / SUBSTEPS;
 
-        if (ticks == lastTick + 2) {
+        if (ticks == lastTick + 1) {
             lastTick = ticks;
             newBall(&borderBall, ballsArray);
         }
@@ -89,7 +96,7 @@ int main(int argc, char* argv[]) {
 
         // make a white ball in the middle, filled in
         SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
-        drawFilledCircle(renderer, borderBall.position.x, borderBall.position.y, borderBall.radius - 2);
+        drawFilledCircle(renderer, borderBall.position.x, borderBall.position.y, borderBall.radius);
 
         while (SDL_PollEvent(&e) != 0) {
             if (e.type == SDL_QUIT) {
@@ -97,12 +104,13 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        for (int i = 0; i < ballsArray->size; i++) {   
-            updateBalls(&ballsArray->balls[i], ballsArray, &borderBall, deltaTime * 5);
-
-            SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF); 
-            drawCircle(renderer, ballsArray->balls[i].position.x, ballsArray->balls[i].position.y, ballsArray->balls[i].radius);
+        for (int subStep = 0; subStep < SUBSTEPS; subStep++) {
+            for (int i = 0; i < ballsArray->size; i++) {   
+                updateBalls(&ballsArray->balls[i], ballsArray, &borderBall, deltaTimeChunk);
+            }
         }
+
+        drawBalls(ballsArray, renderer);
 
         // Update screen
         SDL_RenderPresent(renderer);

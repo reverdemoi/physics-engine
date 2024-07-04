@@ -27,7 +27,7 @@ void freeBallArray(BallArray *balls) {
 }
 
 void newBall(Ball* borderBall, BallArray* balls) {
-    *borderBall = (Ball){{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2}, {0, 0}, 500};
+    *borderBall = (Ball){{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2}, {SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2}, {0, 0}, {0, 0}, 250};
     
     if (balls->size >= balls->capacity) {
         balls->capacity *= 2;
@@ -49,11 +49,16 @@ void newBall(Ball* borderBall, BallArray* balls) {
     genBallValues(newBall, borderBall, balls);
 }
 
+
+
 void genBallValues(Ball* ball, Ball* borderBall, BallArray* balls) {
     double centerX = SCREEN_WIDTH / 2.0;
     double centerY = SCREEN_HEIGHT / 2.0;
 
     ball->position = (Vector){centerX, centerY};
+    ball->previousPosition = (Vector){centerX - 2, centerY + 2};
+    // ball->velocity = (Vector){0, 0};
+    ball->acceleration = (Vector){0, 0};
     ball->radius = 10;
     ball->gravity = true;
     ball->ballNumber = balls->size;
@@ -64,7 +69,7 @@ void genBallValues(Ball* ball, Ball* borderBall, BallArray* balls) {
 
     // Ball goes towards mouse
     Vector normal = normalize(subtract(mouseVec, borderBall->position));
-    ball->velocity = multiply(normal, 100.0);
+    ball->velocity = multiply(normal, 50);
 }
 
 double borderCollision(Ball* ball, Ball* borderBall) {
@@ -159,19 +164,56 @@ void handleBallCollision(Ball* ball, Ball* balls, int numBalls, Ball* borderBall
     }
 }
 
+void verletIntegration(Ball* ball, BallArray* ballsArray, Ball* borderBall, double deltaTime) {
+    double newXVel = ball->velocity.x * deltaTime + 0.5 * ball->acceleration.x * deltaTime * deltaTime;
+    double newYVel = ball->velocity.y * deltaTime + 0.5 * ball->acceleration.y * deltaTime * deltaTime;
+
+    ball->position.x += newXVel;
+    ball->position.y += newYVel;
+
+    ball->acceleration.y = pow(GRAVITY, 2) * deltaTime;
+
+    ball->velocity = add(ball->velocity, multiply(ball->acceleration, deltaTime)); 
+}
+
+void drawBalls(BallArray* ballsArray, SDL_Renderer* renderer) {
+    for (int i = 0; i < ballsArray->size; i++) {   
+        SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF); 
+        drawCircle(renderer, ballsArray->balls[i].position.x, ballsArray->balls[i].position.y, ballsArray->balls[i].radius);
+    }
+}
+
 void updateBalls(Ball* ball, BallArray* ballsArray, Ball* borderBall, double deltaTime) {
+    Vector tempPosition = ball->position;
+    
     if (round(ball->position.y) == 330 && round(ball->velocity.x * 10) / 10 == 0) {
         ball->velocity.x = 0;
         ball->velocity.y = 0;
     } else {
-        ball->velocity.y += pow(GRAVITY, 2) * deltaTime;
+        // Update acceleration
+        ball->acceleration.y = GRAVITY;
+
+        // Update position using Verlet integration
+        Vector newPosition = add(
+            subtract(
+                multiply(ball->position, 2),
+                ball->previousPosition
+            ),
+            multiply(ball->acceleration, deltaTime * deltaTime)
+        );
+
+        // Compute velocity based on new and previous positions
+        ball->velocity = multiply(subtract(newPosition, ball->previousPosition), 1.0 / (2 * deltaTime));
+
+        ball->previousPosition = ball->position;
+        ball->position = newPosition;
     }
 
+    // verletIntegration(ball, ballsArray, borderBall, deltaTime);
     double distance = borderCollision(ball, borderBall);    
     handleOutOfBounds(ball, borderBall);
     handleBallCollision(ball, ballsArray->balls, ballsArray->size + 1, borderBall);
-
-    ball->position = add(ball->position, multiply(ball->velocity, deltaTime));
 }
+
 
 // I THINK THE EXCESSIVE JITTERING IS BECAUSE THE BALLS ACCIDENTLY GO HALFWAY THROUGH EACH OTHER WHICH WILL RESULT IN THE OVERLAP VELOCITY CHANGE TO THROW THEM EACH AT THE OTHER ONES DIRECTION - CAUSING MASS EXCESSIVE JITTERING
